@@ -1,23 +1,30 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { HeartHandshake, LogOut } from 'lucide-react';
+import { HeartHandshake, LogOut, Languages } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { useI18n } from '../i18n/I18nContext';
+import { LANGUAGES } from '../i18n/translations';
 import { Badge } from './ui/Badge';
 import { cn } from '../lib/utils';
 
-const NAV_BY_ROLE = {
-  buyer: [
-    { to: '/buyer', label: 'Dashboard' },
-    { to: '/buyer/book', label: 'Book a service' },
-    { to: '/buyer/billing', label: 'Billing' },
-    { to: '/buyer/sos', label: 'SOS' },
-  ],
-  care_manager: [{ to: '/care_manager', label: 'Console' }],
-  caregiver: [{ to: '/caregiver', label: 'My visits' }],
-  parent: [{ to: '/parent', label: 'Home' }],
-};
+function navByRole(t) {
+  return {
+    buyer: [
+      { to: '/buyer', label: t('dashboard') },
+      { to: '/buyer/book', label: t('bookService') },
+      { to: '/buyer/billing', label: t('billing') },
+      { to: '/buyer/messages', label: t('messages') },
+      { to: '/buyer/sos', label: t('sos') },
+    ],
+    care_manager: [{ to: '/care_manager', label: 'Console' }],
+    caregiver: [{ to: '/caregiver', label: 'My visits' }],
+    admin: [{ to: '/admin', label: 'Admin' }],
+    parent: [{ to: '/parent', label: t('dashboard') }],
+  };
+}
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
+  const { locale, setLocale, t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,7 +33,7 @@ export default function Layout({ children }) {
     navigate('/login');
   }
 
-  const navItems = user ? NAV_BY_ROLE[user.role] || [] : [];
+  const navItems = user ? navByRole(t)[user.role] || [] : [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -66,13 +73,25 @@ export default function Layout({ children }) {
           </div>
           {user && (
             <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-1 text-stone-400">
+                <Languages className="h-3.5 w-3.5" />
+                <select
+                  value={locale}
+                  onChange={(e) => setLocale(e.target.value)}
+                  className="text-xs bg-transparent border-none focus:outline-none text-stone-500"
+                >
+                  {LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>{l.label}</option>
+                  ))}
+                </select>
+              </div>
               <span className="text-sm text-stone-600 hidden sm:inline">{user.name}</span>
               <button
                 onClick={onLogout}
                 className="flex items-center gap-1.5 text-sm font-medium text-stone-500 hover:text-rose-600 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Log out</span>
+                <span className="hidden sm:inline">{t('logOut')}</span>
               </button>
             </div>
           )}

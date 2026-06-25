@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Users, CalendarPlus, MapPin } from 'lucide-react';
+import { AlertTriangle, Users, CalendarPlus, MapPin, MessageCircle, Pill } from 'lucide-react';
 import { api } from '../../api/client';
 import { Card, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input, Label } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import ChatPanel from '../../components/ChatPanel';
 
 const SEVERITY_VARIANT = { emergency: 'danger', critical: 'danger', warning: 'warning', info: 'neutral' };
 
@@ -17,6 +18,10 @@ export default function Console() {
 
   const [form, setForm] = useState({ parentId: '', caregiverId: '', type: 'attendant', scheduledAt: '', checklist: '' });
   const [scheduleStatus, setScheduleStatus] = useState('');
+  const [activeFamilyId, setActiveFamilyId] = useState('');
+  const [activeThreadId, setActiveThreadId] = useState(null);
+  const [medForm, setMedForm] = useState({ parentId: '', medication: '', scheduledAt: '' });
+  const [medStatus, setMedStatus] = useState('');
 
   function refresh() {
     api.get('/families').then(setFamilies).catch((e) => setError(e.message));
@@ -36,7 +41,7 @@ export default function Console() {
         type: form.type,
         scheduledAt: form.scheduledAt,
         taskChecklist: form.checklist ? form.checklist.split(',').map((c) => c.trim()) : [],
-      });
+      }, crypto.randomUUID());
       setScheduleStatus('Visit scheduled.');
     } catch (err) {
       setScheduleStatus(`Error: ${err.message}`);
@@ -46,6 +51,26 @@ export default function Console() {
   async function acknowledge(id) {
     await api.patch(`/alerts/${id}/acknowledge`, { resolution: 'Acknowledged by Care Manager' });
     refresh();
+  }
+
+  async function scheduleMedication(e) {
+    e.preventDefault();
+    setMedStatus('');
+    try {
+      await api.post(`/parents/${medForm.parentId}/medications`, {
+        medication: medForm.medication,
+        scheduledAt: medForm.scheduledAt,
+      });
+      setMedStatus('Medication reminder scheduled.');
+    } catch (err) {
+      setMedStatus(`Error: ${err.message}`);
+    }
+  }
+
+  async function openThread(familyId) {
+    setActiveFamilyId(familyId);
+    const thread = await api.get(`/families/${familyId}/thread`);
+    setActiveThreadId(thread.id);
   }
 
   const openAlerts = alerts.filter((a) => !a.acknowledgedAt);
@@ -94,6 +119,44 @@ export default function Console() {
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card>
+        <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-brand-500" /> Messages</CardTitle>
+        <div className="mt-3 mb-3">
+          <Select value={activeFamilyId} onChange={(e) => openThread(e.target.value)}>
+            <option value="">Select a family to message</option>
+            {families.map((f) => (
+              <option key={f.id} value={f.id}>{f.users.find((u) => u.role === 'buyer')?.name || 'Family'}</option>
+            ))}
+          </Select>
+        </div>
+        {activeThreadId && <ChatPanel threadId={activeThreadId} />}
+      </Card>
+
+      <Card>
+        <CardTitle className="flex items-center gap-2"><Pill className="h-5 w-5 text-brand-500" /> Schedule a medication reminder</CardTitle>
+        <form onSubmit={scheduleMedication} className="space-y-4 mt-3">
+          <div>
+            <Label>Parent</Label>
+            <Select value={medForm.parentId} onChange={(e) => setMedForm({ ...medForm, parentId: e.target.value })}>
+              <option value="">Select parent</option>
+              {allParents.map((p) => (
+                <option key={p.id} value={p.id}>{p.user.name} ({p.familyName})</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Medication</Label>
+            <Input value={medForm.medication} onChange={(e) => setMedForm({ ...medForm, medication: e.target.value })} placeholder="Amlodipine 5mg" />
+          </div>
+          <div>
+            <Label>Scheduled at</Label>
+            <Input type="datetime-local" value={medForm.scheduledAt} onChange={(e) => setMedForm({ ...medForm, scheduledAt: e.target.value })} />
+          </div>
+          <Button type="submit" size="lg" className="w-full">Schedule reminder</Button>
+          {medStatus && <p className="text-sm text-stone-500 text-center">{medStatus}</p>}
+        </form>
       </Card>
 
       <Card>

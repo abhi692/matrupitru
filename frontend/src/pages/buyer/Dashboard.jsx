@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { MapPin, ShieldAlert, CheckCircle2, AlertTriangle, CalendarClock, Activity, CreditCard, Stethoscope } from 'lucide-react';
+import { MapPin, ShieldAlert, CheckCircle2, AlertTriangle, CalendarClock, Activity, CreditCard, Stethoscope, Pill, Sparkles, Loader2 } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -12,13 +12,21 @@ const SEVERITY_VARIANT = { emergency: 'danger', critical: 'danger', warning: 'wa
 export default function Dashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [meds, setMeds] = useState([]);
   const [error, setError] = useState('');
+  const [digest, setDigest] = useState(null);
+  const [digestError, setDigestError] = useState('');
+  const [digestLoading, setDigestLoading] = useState(false);
 
   useEffect(() => {
     if (!user?.familyId) return;
     api
       .get(`/families/${user.familyId}/dashboard`)
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        const parentId = d.parents[0]?.id;
+        if (parentId) api.get(`/parents/${parentId}/medications`).then(setMeds);
+      })
       .catch((err) => setError(err.message));
   }, [user]);
 
@@ -27,6 +35,20 @@ export default function Dashboard() {
   if (!data) return <p className="text-stone-400 text-center py-12">Loading dashboard...</p>;
 
   const parent = data.parents[0];
+
+  async function generateDigest() {
+    setDigestLoading(true);
+    setDigestError('');
+    setDigest(null);
+    try {
+      const result = await api.post(`/families/${user.familyId}/digest`, {});
+      setDigest(result);
+    } catch (err) {
+      setDigestError(err.message);
+    } finally {
+      setDigestLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -66,6 +88,27 @@ export default function Dashboard() {
           </ul>
         </Card>
       )}
+
+      <Card className="border-brand-100 bg-brand-50/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-brand-700"><Sparkles className="h-5 w-5" /> AI family update</CardTitle>
+        </CardHeader>
+        {!digest && (
+          <Button variant="subtle" onClick={generateDigest} disabled={digestLoading}>
+            {digestLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {digestLoading ? 'Generating...' : 'Generate this week\'s update'}
+          </Button>
+        )}
+        {digestError && <p className="text-sm text-stone-500 mt-3">{digestError}</p>}
+        {digest && (
+          <div>
+            <p className="text-stone-700 leading-relaxed">{digest.digest}</p>
+            <Button variant="ghost" size="sm" className="mt-3" onClick={generateDigest}>
+              <Sparkles className="h-3.5 w-3.5" /> Regenerate
+            </Button>
+          </div>
+        )}
+      </Card>
 
       <div className="grid sm:grid-cols-2 gap-6">
         <Card>
@@ -157,6 +200,28 @@ export default function Dashboard() {
           </div>
         )}
       </Card>
+
+      {meds.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Pill className="h-5 w-5 text-brand-500" /> Medication adherence</CardTitle>
+          </CardHeader>
+          <ul className="space-y-2">
+            {meds.slice(0, 8).map((m) => (
+              <li key={m.id} className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5">
+                <span className="font-medium text-stone-700">{m.medication}</span>
+                <span className="text-right text-xs">
+                  <Badge variant={m.status === 'given' ? 'success' : m.status === 'missed' ? 'danger' : 'neutral'} className="capitalize">
+                    {m.status}
+                  </Badge>
+                  <br />
+                  <span className="text-stone-400">{new Date(m.scheduledAt).toLocaleString()}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

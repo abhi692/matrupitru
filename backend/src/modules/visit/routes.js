@@ -5,15 +5,40 @@ import { bus } from '../../events/bus.js';
 import { distanceMeters, GEO_VERIFY_RADIUS_M } from '../../lib/geo.js';
 import { notifyAll } from '../../lib/notify.js';
 import { omitPasswordHash } from '../../lib/sanitize.js';
+import { upload, fileUrl } from '../../lib/upload.js';
 
 export const visitRouter = Router();
 
 // POST /v1/visits — schedule (care manager)
+// Idempotency-Key header: replaying the same key returns the original visit instead
+// of creating a duplicate (§5 — required on POSTs that create visits/money).
 visitRouter.post('/visits', requireAuth, requireRole('care_manager', 'admin'), async (req, res) => {
   const { parentId, caregiverId, type, scheduledAt, taskChecklist = [] } = req.body;
   if (!parentId || !type || !scheduledAt) {
     return res.status(400).json({ error: 'parentId, type, scheduledAt required' });
   }
+
+  const idempotencyKey = req.headers['idempotency-key'];
+  if (idempotencyKey) {
+    const existing = await prisma.visit.findUnique({ where: { idempotencyKey } });
+    if (existing) return res.status(200).json(existing);
+  }
+
+  // City-coverage enforcement (§9, §12): a caregiver can only be assigned to visits
+  // in cities they actually cover, so ops/admin coverage settings mean something.
+  if (caregiverId) {
+    const [parent, caregiver] = await Promise.all([
+      prisma.parent.findUnique({ where: { id: parentId } }),
+      prisma.caregiver.findUnique({ where: { userId: caregiverId } }),
+    ]);
+    if (parent?.city && caregiver) {
+      const cities = JSON.parse(caregiver.serviceCitiesJson || '[]');
+      if (cities.length > 0 && !cities.includes(parent.city)) {
+        return res.status(400).json({ error: `Caregiver does not cover ${parent.city}` });
+      }
+    }
+  }
+
   const visit = await prisma.visit.create({
     data: {
       parentId,
@@ -23,6 +48,7 @@ visitRouter.post('/visits', requireAuth, requireRole('care_manager', 'admin'), a
       scheduledAt: new Date(scheduledAt),
       taskChecklistJson: JSON.stringify(taskChecklist.map((t) => ({ task: t, done: false }))),
       status: 'scheduled',
+      idempotencyKey: idempotencyKey || undefined,
     },
   });
   res.status(201).json(visit);
@@ -114,6 +140,28 @@ visitRouter.post('/visits/:id/proof', requireAuth, requireRole('caregiver', 'adm
   res.status(201).json(proof);
 });
 
+// POST /v1/visits/:id/proof/upload — real file upload (local-disk object-store stand-in)
+visitRouter.post(
+  '/visits/:id/proof/upload',
+  requireAuth,
+  requireRole('caregiver', 'admin'),
+  upload.single('file'),
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'file required (jpeg/png/webp/heic, max 10MB)' });
+
+    const proof = await prisma.proofArtifact.create({
+      data: {
+        visitId: req.params.id,
+        type: 'photo',
+        storageUrl: fileUrl(req, req.file.filename),
+        capturedBy: req.user.id,
+        metadataJson: JSON.stringify({ originalName: req.file.originalname, size: req.file.size }),
+      },
+    });
+    res.status(201).json(proof);
+  }
+);
+
 // POST /v1/visits/:id/confirm — parent confirms visit happened (the independent trust signal)
 visitRouter.post('/visits/:id/confirm', requireAuth, requireRole('parent', 'admin'), async (req, res) => {
   const visit = await prisma.visit.update({
@@ -136,7 +184,11 @@ visitRouter.post('/visits/:id/confirm', requireAuth, requireRole('parent', 'admi
 visitRouter.get('/visits/:id', requireAuth, async (req, res) => {
   const visit = await prisma.visit.findUnique({
     where: { id: req.params.id },
-    include: { proofs: true, parent: { include: { user: true } }, caregiver: true },
+    include: {
+      proofs: true,
+      parent: { include: { user: true } },
+      caregiver: { include: { caregiverProfile: true } },
+    },
   });
   if (!visit) return res.status(404).json({ error: 'Visit not found' });
   res.json(omitPasswordHash(visit));
@@ -147,7 +199,7 @@ visitRouter.get('/visits', requireAuth, async (req, res) => {
   const { caregiverId } = req.query;
   const visits = await prisma.visit.findMany({
     where: caregiverId ? { caregiverId } : undefined,
-    include: { parent: { include: { user: true } } },
+    include: { parent: { include: { user: true } }, proofs: true },
     orderBy: { scheduledAt: 'asc' },
   });
   res.json(omitPasswordHash(visits));

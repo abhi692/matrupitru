@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import { prisma } from '../../lib/db.js';
 import { requireAuth } from '../../lib/auth.js';
+import { getIdempotencyKey, findByIdempotencyKey } from '../../lib/idempotency.js';
 
 export const billingRouter = Router();
 
@@ -11,8 +12,12 @@ billingRouter.post('/payments/intent', requireAuth, async (req, res) => {
   const { familyId, amount, currency = 'INR', method = 'card', type = 'one_time', bookingId } = req.body;
   if (!familyId || !amount) return res.status(400).json({ error: 'familyId, amount required' });
 
+  const idempotencyKey = getIdempotencyKey(req);
+  const existing = await findByIdempotencyKey(prisma.payment, idempotencyKey);
+  if (existing) return res.status(200).json(existing);
+
   const payment = await prisma.payment.create({
-    data: { familyId, amount, currency, method, type, gatewayRef: `mock_${uuid()}`, status: 'succeeded' },
+    data: { familyId, amount, currency, method, type, gatewayRef: `mock_${uuid()}`, status: 'succeeded', idempotencyKey },
   });
 
   if (bookingId) {
@@ -27,12 +32,16 @@ billingRouter.post('/subscriptions', requireAuth, async (req, res) => {
   const { familyId, amount, currency = 'USD' } = req.body;
   if (!familyId || !amount) return res.status(400).json({ error: 'familyId, amount required' });
 
+  const idempotencyKey = getIdempotencyKey(req);
+  const existing = await findByIdempotencyKey(prisma.subscription, idempotencyKey);
+  if (existing) return res.status(200).json(existing);
+
   const periodStart = new Date();
   const periodEnd = new Date(periodStart);
   periodEnd.setMonth(periodEnd.getMonth() + 1);
 
   const subscription = await prisma.subscription.create({
-    data: { familyId, amount, currency, periodStart, periodEnd, status: 'active' },
+    data: { familyId, amount, currency, periodStart, periodEnd, status: 'active', idempotencyKey },
   });
   res.status(201).json(subscription);
 });

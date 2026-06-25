@@ -68,6 +68,8 @@ export default function Sos() {
             <span>
               Alert raised. Care Manager notified: {sosResult.notified.careManager ? 'yes' : 'no'}.{' '}
               Buyers notified: {sosResult.notified.buyers}.
+              {sosResult.dispatchedCaregiver && <> Nearest caregiver dispatched: <strong>{sosResult.dispatchedCaregiver.name}</strong>.</>}
+              {sosResult.preferredHospitalNotified && <> Preferred hospital placed on standby.</>}
             </span>
           </div>
         )}

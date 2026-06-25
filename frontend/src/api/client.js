@@ -9,10 +9,11 @@ export function setToken(token) {
   else localStorage.removeItem('mp_token');
 }
 
-async function request(method, path, body) {
+async function request(method, path, body, idempotencyKey) {
   const headers = { 'Content-Type': 'application/json' };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
 
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -25,8 +26,23 @@ async function request(method, path, body) {
   return data;
 }
 
+async function upload(path, file, fieldName = 'file') {
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const formData = new FormData();
+  formData.append(fieldName, file);
+
+  const res = await fetch(`${BASE}${path}`, { method: 'POST', headers, body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Upload failed: ${res.status}`);
+  return data;
+}
+
 export const api = {
   get: (path) => request('GET', path),
-  post: (path, body) => request('POST', path, body),
+  post: (path, body, idempotencyKey) => request('POST', path, body, idempotencyKey),
   patch: (path, body) => request('PATCH', path, body),
+  upload,
 };

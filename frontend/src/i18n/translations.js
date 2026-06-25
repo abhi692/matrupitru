@@ -1,0 +1,77 @@
+// Real translated strings for English, Hindi, and Kannada — the §1.2 localisation
+// requirement. Covers the parent app fully (the dignified, low-literacy surface
+// the doc is strictest about) plus shared nav/buyer-dashboard chrome.
+export const LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'हिन्दी' },
+  { code: 'kn', label: 'ಕನ್ನಡ' },
+];
+
+export const translations = {
+  en: {
+    namaste: 'Namaste',
+    iNeedHelp: 'I need help',
+    didCaregiverVisit: 'Did your caregiver visit today?',
+    noVisitWaiting: 'No visit waiting for your confirmation.',
+    yesTheyVisited: 'Yes, they visited',
+    helpOnWay: 'Help is on the way. Your family and Care Manager have been notified.',
+    visit: 'visit',
+    dashboard: 'Dashboard',
+    bookService: 'Book a service',
+    billing: 'Billing',
+    messages: 'Messages',
+    sos: 'SOS',
+    logOut: 'Log out',
+    upcomingVisits: 'Upcoming visits',
+    recentActivity: 'Recent activity — proof of care',
+    carePlan: 'Care plan',
+    listenAloud: 'Listen aloud',
+    speakToConfirm: 'Speak to confirm',
+    listening: 'Listening...',
+  },
+  hi: {
+    namaste: 'नमस्ते',
+    iNeedHelp: 'मुझे मदद चाहिए',
+    didCaregiverVisit: 'क्या आज आपकी देखभाल करने वाला आया?',
+    noVisitWaiting: 'पुष्टि के लिए कोई विज़िट नहीं है।',
+    yesTheyVisited: 'हाँ, वे आए थे',
+    helpOnWay: 'सहायता आ रही है। आपके परिवार और केयर मैनेजर को सूचित कर दिया गया है।',
+    visit: 'विज़िट',
+    dashboard: 'डैशबोर्ड',
+    bookService: 'सेवा बुक करें',
+    billing: 'बिलिंग',
+    messages: 'संदेश',
+    sos: 'एसओएस',
+    logOut: 'लॉग आउट',
+    upcomingVisits: 'आने वाली विज़िट्स',
+    recentActivity: 'हाल की गतिविधि — देखभाल का प्रमाण',
+    carePlan: 'केयर प्लान',
+    listenAloud: 'सुनें',
+    speakToConfirm: 'पुष्टि करने के लिए बोलें',
+    listening: 'सुन रहा है...',
+  },
+  kn: {
+    namaste: 'ನಮಸ್ತೆ',
+    iNeedHelp: 'ನನಗೆ ಸಹಾಯ ಬೇಕು',
+    didCaregiverVisit: 'ಇಂದು ನಿಮ್ಮ ಆರೈಕೆದಾರರು ಭೇಟಿ ನೀಡಿದರೇ?',
+    noVisitWaiting: 'ದೃಢೀಕರಣಕ್ಕಾಗಿ ಯಾವುದೇ ಭೇಟಿ ಇಲ್ಲ.',
+    yesTheyVisited: 'ಹೌದು, ಅವರು ಭೇಟಿ ನೀಡಿದರು',
+    helpOnWay: 'ಸಹಾಯ ಬರುತ್ತಿದೆ. ನಿಮ್ಮ ಕುಟುಂಬ ಮತ್ತು ಕೇರ್ ಮ್ಯಾನೇಜರ್‌ಗೆ ತಿಳಿಸಲಾಗಿದೆ.',
+    visit: 'ಭೇಟಿ',
+    dashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
+    bookService: 'ಸೇವೆ ಕಾಯ್ದಿರಿಸಿ',
+    billing: 'ಬಿಲ್ಲಿಂಗ್',
+    messages: 'ಸಂದೇಶಗಳು',
+    sos: 'ಎಸ್ಒಎಸ್',
+    logOut: 'ಲಾಗ್ ಔಟ್',
+    upcomingVisits: 'ಮುಂಬರುವ ಭೇಟಿಗಳು',
+    recentActivity: 'ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ — ಆರೈಕೆಯ ಪುರಾವೆ',
+    carePlan: 'ಕೇರ್ ಯೋಜನೆ',
+    listenAloud: 'ಕೇಳಿ',
+    speakToConfirm: 'ದೃಢೀಕರಿಸಲು ಮಾತನಾಡಿ',
+    listening: 'ಕೇಳುತ್ತಿದೆ...',
+  },
+};
+
+// BCP-47 tags for the Web Speech API (§10.1 vernacular voice interface)
+export const SPEECH_LOCALE = { en: 'en-US', hi: 'hi-IN', kn: 'kn-IN' };

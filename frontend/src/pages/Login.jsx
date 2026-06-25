@@ -10,6 +10,7 @@ const DEMO_ACCOUNTS = [
   { label: 'Parent', name: 'Lakshmi Rao', phone: '+919900000003' },
   { label: 'Care Manager', name: 'Ravi Kumar', phone: '+919900000001' },
   { label: 'Caregiver', name: 'Ramesh Naik', phone: '+919900000002' },
+  { label: 'Admin', name: 'Priya Sharma', phone: '+919900000099' },
 ];
 
 export default function Login() {

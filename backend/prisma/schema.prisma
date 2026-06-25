@@ -14,6 +14,7 @@ model Family {
   id             String   @id @default(uuid())
   primaryBuyerId String
   billingCurrency String  @default("USD")
+  consentAt      DateTime?
   createdAt      DateTime @default(now())
 
   users          User[]
@@ -58,6 +59,7 @@ model Parent {
 
   dob              DateTime?
   address          String
+  city             String?
   geoLat           Float?
   geoLng           Float?
   languagesJson    String   @default("[]")
@@ -69,11 +71,24 @@ model Parent {
   emergencyContactsJson String @default("[]")
   preferredHospital String?
   notes            String?
+  consentAt        DateTime?
 
   visits           Visit[]
   vitals           VitalsReading[]
   bookings         ServiceBooking[]
   alerts           Alert[]
+  medicationLogs   MedicationLog[]
+}
+
+model MedicationLog {
+  id          String   @id @default(uuid())
+  parentId    String
+  parent      Parent   @relation(fields: [parentId], references: [id])
+  medication  String
+  scheduledAt DateTime
+  status      String   @default("pending") // pending | given | missed
+  givenAt     DateTime?
+  recordedBy  String?
 }
 
 model CarePlan {
@@ -114,6 +129,8 @@ model Visit {
   geoVerified   Boolean  @default(false)
   parentConfirmedAt DateTime?
 
+  idempotencyKey String? @unique
+
   proofs        ProofArtifact[]
   vitals        VitalsReading[]
 
@@ -131,6 +148,13 @@ model ProofArtifact {
   metadataJson String  @default("{}")
 }
 
+// Logically a time-series table — §4 explicitly warns against jamming vitals into
+// the main transactional store as volume grows. Phase 1 keeps it in SQLite/Postgres
+// behind this same model+API shape for simplicity; the (parentId, type, recordedAt)
+// index below is what makes the trend query in health/routes.js cheap at this scale.
+// Production swap path: point this model at a real time-series store (Timescale
+// hypertable on this same table, or a separate InfluxDB/Timescale instance synced
+// via the event bus) without changing the GET /v1/parents/:id/vitals contract.
 model VitalsReading {
   id         String   @id @default(uuid())
   parentId   String
@@ -143,6 +167,8 @@ model VitalsReading {
   recordedAt DateTime @default(now())
   source     String   // caregiver | device | self
   flagged    Boolean  @default(false)
+
+  @@index([parentId, type, recordedAt])
 }
 
 model ServiceBooking {
@@ -158,6 +184,7 @@ model ServiceBooking {
   price         Float
   currency      String   @default("INR")
   paymentId     String?
+  idempotencyKey String? @unique
   createdAt     DateTime @default(now())
 }
 
@@ -184,6 +211,7 @@ model Payment {
   gatewayRef  String?
   type        String   // subscription | one_time
   status      String   @default("succeeded")
+  idempotencyKey String? @unique
   createdAt   DateTime @default(now())
 }
 
@@ -196,6 +224,7 @@ model Subscription {
   periodStart DateTime
   periodEnd   DateTime
   status      String   @default("active")
+  idempotencyKey String? @unique
 }
 
 model Caregiver {

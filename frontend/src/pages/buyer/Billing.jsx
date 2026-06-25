@@ -22,7 +22,7 @@ export default function Billing() {
   async function subscribe() {
     setStatus('');
     try {
-      const sub = await api.post('/subscriptions', { familyId: user.familyId, amount: Number(amount), currency: 'USD' });
+      const sub = await api.post('/subscriptions', { familyId: user.familyId, amount: Number(amount), currency: 'USD' }, crypto.randomUUID());
       setSubs((s) => [sub, ...s]);
       setStatus('Subscription active (mock gateway).');
     } catch (err) {

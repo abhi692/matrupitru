@@ -38,14 +38,14 @@ export default function Book() {
         familyId: user.familyId,
         parentId,
         serviceCatalogId: selected,
-      });
+      }, crypto.randomUUID());
       const payment = await api.post('/payments/intent', {
         familyId: user.familyId,
         amount: service.price,
         currency: service.currency,
         type: 'one_time',
         bookingId: booking.id,
-      });
+      }, crypto.randomUUID());
       setStatus({ ok: true, message: `Booked ${service.name} for ${service.currency} ${service.price}. Payment ${payment.status}.` });
     } catch (err) {
       setStatus({ ok: false, message: err.message });

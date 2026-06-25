@@ -54,3 +54,42 @@ healthRouter.get('/parents/:id/vitals', requireAuth, async (req, res) => {
   const readings = await prisma.vitalsReading.findMany({ where, orderBy: { recordedAt: 'asc' } });
   res.json(readings);
 });
+
+// POST /v1/parents/:id/medications — schedule a medication reminder (care manager/caregiver)
+healthRouter.post('/parents/:id/medications', requireAuth, async (req, res) => {
+  const { medication, scheduledAt } = req.body;
+  if (!medication || !scheduledAt) return res.status(400).json({ error: 'medication, scheduledAt required' });
+  const log = await prisma.medicationLog.create({
+    data: { parentId: req.params.id, medication, scheduledAt: new Date(scheduledAt) },
+  });
+  res.status(201).json(log);
+});
+
+// GET /v1/parents/:id/medications — adherence log
+healthRouter.get('/parents/:id/medications', requireAuth, async (req, res) => {
+  const logs = await prisma.medicationLog.findMany({
+    where: { parentId: req.params.id },
+    orderBy: { scheduledAt: 'desc' },
+  });
+  res.json(logs);
+});
+
+// PATCH /v1/medications/:id — caregiver marks a dose given or missed; missed raises an alert
+healthRouter.patch('/medications/:id', requireAuth, async (req, res) => {
+  const { status } = req.body;
+  if (!['given', 'missed'].includes(status)) return res.status(400).json({ error: 'status must be given|missed' });
+
+  const log = await prisma.medicationLog.update({
+    where: { id: req.params.id },
+    data: { status, givenAt: status === 'given' ? new Date() : null, recordedBy: req.user.id },
+  });
+
+  if (status === 'missed') {
+    await bus.emitEvent('medication.missed', { parentId: log.parentId, medication: log.medication });
+    await prisma.alert.create({
+      data: { parentId: log.parentId, severity: 'warning', type: 'med_missed' },
+    });
+  }
+
+  res.json(log);
+});

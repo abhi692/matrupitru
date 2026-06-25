@@ -7,12 +7,17 @@ const prisma = new PrismaClient();
 async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
 
+  // Admin — Priya (ops)
+  const priya = await prisma.user.create({
+    data: { name: 'Priya Sharma', phone: '+919900000099', role: 'admin', passwordHash, locale: 'en' },
+  });
+
   // Care Manager — Ravi
   const ravi = await prisma.user.create({
     data: { name: 'Ravi Kumar', phone: '+919900000001', role: 'care_manager', passwordHash, locale: 'en' },
   });
 
-  // Caregiver — Ramesh
+  // Caregiver — Ramesh (verified, covers Hubli)
   const rameshUser = await prisma.user.create({
     data: { name: 'Ramesh Naik', phone: '+919900000002', role: 'caregiver', passwordHash, locale: 'kn' },
   });
@@ -23,6 +28,21 @@ async function main() {
       skillsJson: JSON.stringify(['attendant', 'physio']),
       serviceCitiesJson: JSON.stringify(['Hubli']),
       rating: 4.8,
+      backgroundCheckRef: 'BGC-2026-00231',
+    },
+  });
+
+  // Caregiver — Suma (pending verification, for admin console demo)
+  const sumaUser = await prisma.user.create({
+    data: { name: 'Suma Patil', phone: '+919900000004', role: 'caregiver', passwordHash, locale: 'kn' },
+  });
+  await prisma.caregiver.create({
+    data: {
+      userId: sumaUser.id,
+      verificationStatus: 'pending',
+      skillsJson: JSON.stringify(['nurse']),
+      serviceCitiesJson: JSON.stringify(['Hubli', 'Dharwad']),
+      rating: 0,
     },
   });
 
@@ -32,7 +52,7 @@ async function main() {
   });
 
   const family = await prisma.family.create({
-    data: { primaryBuyerId: anjali.id, billingCurrency: 'USD' },
+    data: { primaryBuyerId: anjali.id, billingCurrency: 'USD', consentAt: new Date() },
   });
   await prisma.user.update({ where: { id: anjali.id }, data: { familyId: family.id } });
 
@@ -46,14 +66,27 @@ async function main() {
       familyId: family.id,
       dob: new Date('1954-03-12'),
       address: '12 Vidyanagar, Hubli, Karnataka',
+      city: 'Hubli',
       geoLat: 15.3647,
       geoLng: 75.124,
       languagesJson: JSON.stringify(['kn', 'en']),
       mobilityLevel: 'limited',
       techComfort: 'low',
       conditionsJson: JSON.stringify(['hypertension']),
-      emergencyContactsJson: JSON.stringify([{ name: 'Anjali Rao', phone: '+12065550100' }]),
+      allergiesJson: JSON.stringify(['penicillin']),
+      medicationsJson: JSON.stringify(['Amlodipine 5mg - once daily']),
+      emergencyContactsJson: JSON.stringify([{ name: 'Anjali Rao', phone: '+12065550100', relation: 'daughter' }]),
       preferredHospital: 'KIMS Hubli',
+      consentAt: new Date(),
+    },
+  });
+
+  await prisma.medicationLog.create({
+    data: {
+      parentId: lakshmi.id,
+      medication: 'Amlodipine 5mg',
+      scheduledAt: new Date(),
+      status: 'pending',
     },
   });
 
@@ -79,10 +112,12 @@ async function main() {
   });
 
   console.log('Seeded demo data:');
-  console.log('  Buyer (Anjali):       +12065550100 / password123');
-  console.log('  Parent (Lakshmi):     +919900000003 / password123');
-  console.log('  Care Manager (Ravi):  +919900000001 / password123');
-  console.log('  Caregiver (Ramesh):   +919900000002 / password123');
+  console.log('  Buyer (Anjali):        +12065550100 / password123');
+  console.log('  Parent (Lakshmi):      +919900000003 / password123');
+  console.log('  Care Manager (Ravi):   +919900000001 / password123');
+  console.log('  Caregiver (Ramesh):    +919900000002 / password123');
+  console.log('  Caregiver (Suma):      +919900000004 / password123 (pending verification)');
+  console.log('  Admin (Priya):         +919900000099 / password123');
   console.log(`  familyId: ${family.id}`);
   console.log(`  parentId: ${lakshmi.id}`);
   console.log(`  caregiverUserId: ${rameshUser.id}`);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Circle, ShieldCheck, ShieldAlert, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, ShieldCheck, ShieldAlert, Image as ImageIcon, BadgeCheck, Star } from 'lucide-react';
 import { api } from '../../api/client';
 import { Card, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -33,7 +33,19 @@ export default function VisitDetail() {
 
         <div className="grid grid-cols-2 gap-y-3 text-sm mb-4">
           <span className="text-stone-400">Caregiver</span>
-          <span className="font-medium text-stone-700 text-right">{visit.caregiver?.name || 'Unassigned'}</span>
+          <span className="font-medium text-stone-700 text-right">
+            {visit.caregiver?.name || 'Unassigned'}
+            {visit.caregiver?.caregiverProfile?.verificationStatus === 'verified' && (
+              <span className="inline-flex items-center gap-1 text-brand-600 text-xs ml-2 align-middle">
+                <BadgeCheck className="h-3.5 w-3.5" /> Verified
+              </span>
+            )}
+            {visit.caregiver?.caregiverProfile?.rating > 0 && (
+              <span className="inline-flex items-center gap-0.5 text-warm-600 text-xs ml-2 align-middle">
+                <Star className="h-3 w-3 fill-current" /> {visit.caregiver.caregiverProfile.rating.toFixed(1)}
+              </span>
+            )}
+          </span>
 
           <span className="text-stone-400">Check-in</span>
           <span className="font-medium text-stone-700 text-right">{visit.checkInAt ? new Date(visit.checkInAt).toLocaleString() : '—'}</span>
