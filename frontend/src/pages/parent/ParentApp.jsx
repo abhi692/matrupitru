@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Siren, HeartHandshake } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -43,25 +44,48 @@ export default function ParentApp() {
     }
   }
 
+  const pendingConfirm = visits.filter((v) => v.status === 'completed' && !v.parentConfirmedAt);
+
   return (
-    <div className="parent-app">
-      <h1 className="big-greeting">Namaste, {parent?.user.name || ''}</h1>
-      {error && <div className="error">{error}</div>}
+    <div className="max-w-md mx-auto space-y-5">
+      <div className="flex items-center gap-3">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+          <HeartHandshake className="h-6 w-6" />
+        </span>
+        <h1 className="text-3xl font-bold text-brand-700">Namaste, {parent?.user.name || ''}</h1>
+      </div>
 
-      <button className="sos-button big" onClick={raiseSos}>🚨 I need help</button>
-      {sosStatus && <p className="ok-text big-text">{sosStatus}</p>}
+      {error && <p className="text-base text-rose-600 bg-rose-50 rounded-card px-4 py-3">{error}</p>}
 
-      <div className="card">
-        <h2 className="big-text">Did your caregiver visit today?</h2>
-        {visits.filter((v) => v.status === 'completed' && !v.parentConfirmedAt).length === 0 && (
-          <p className="muted big-text">No visit waiting for your confirmation.</p>
-        )}
-        {visits.filter((v) => v.status === 'completed' && !v.parentConfirmedAt).map((v) => (
-          <div key={v.id} className="confirm-row">
-            <p className="big-text">{v.type} visit — {new Date(v.checkOutAt).toLocaleString()}</p>
-            <button className="big" onClick={() => confirmVisit(v.id)}>Yes, they visited</button>
+      <button
+        onClick={raiseSos}
+        className="w-full flex items-center justify-center gap-3 rounded-card bg-rose-600 hover:bg-rose-700 text-white text-xl font-bold py-6 shadow-soft-lg transition-colors"
+      >
+        <Siren className="h-7 w-7" /> I need help
+      </button>
+      {sosStatus && <p className="text-lg text-brand-700 bg-brand-50 rounded-card px-4 py-3">{sosStatus}</p>}
+
+      <div className="bg-white rounded-card border border-stone-100 shadow-soft p-6">
+        <h2 className="text-xl font-semibold text-stone-800 mb-4">Did your caregiver visit today?</h2>
+        {pendingConfirm.length === 0 ? (
+          <p className="text-lg text-stone-400">No visit waiting for your confirmation.</p>
+        ) : (
+          <div className="space-y-4">
+            {pendingConfirm.map((v) => (
+              <div key={v.id} className="border border-stone-100 rounded-control p-4">
+                <p className="text-lg text-stone-700 capitalize mb-3">
+                  {v.type} visit — {new Date(v.checkOutAt).toLocaleString()}
+                </p>
+                <button
+                  onClick={() => confirmVisit(v.id)}
+                  className="w-full rounded-control bg-brand-500 hover:bg-brand-600 text-white text-lg font-semibold py-4 transition-colors"
+                >
+                  Yes, they visited
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

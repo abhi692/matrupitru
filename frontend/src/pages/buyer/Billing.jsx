@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
+import { CreditCard, CheckCircle2 } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { Card, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Input, Label } from '../../components/ui/Input';
+import { Badge } from '../../components/ui/Badge';
 
 export default function Billing() {
   const { user } = useAuth();
@@ -26,22 +31,44 @@ export default function Billing() {
   }
 
   return (
-    <div className="card">
-      <h2>Billing & subscription</h2>
-      <p className="muted">International cards (Stripe) / UPI & netbanking (Razorpay) integration is mocked for Phase 1 local build.</p>
-      <label>Monthly amount (USD)</label>
-      <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      <button onClick={subscribe}>Subscribe</button>
-      {status && <p>{status}</p>}
+    <div className="max-w-xl mx-auto space-y-6">
+      <Card>
+        <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-brand-500" /> Billing &amp; subscription</CardTitle>
+        <CardDescription className="mb-5">
+          International cards (Stripe) / UPI &amp; netbanking (Razorpay) integration is mocked for Phase 1.
+        </CardDescription>
+        <Label>Monthly amount (USD)</Label>
+        <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Button onClick={subscribe} size="lg" className="w-full mt-3">
+          Subscribe
+        </Button>
+        {status && (
+          <div className="flex items-center gap-2 text-sm text-brand-700 bg-brand-50 rounded-control px-3 py-2.5 mt-4">
+            <CheckCircle2 className="h-4 w-4 shrink-0" /> {status}
+          </div>
+        )}
+      </Card>
 
-      <h3>Subscription history</h3>
-      <ul>
-        {subs.map((s) => (
-          <li key={s.id}>
-            {s.currency} {s.amount}/mo — {s.status} — {new Date(s.periodStart).toLocaleDateString()} to {new Date(s.periodEnd).toLocaleDateString()}
-          </li>
-        ))}
-      </ul>
+      <Card>
+        <CardTitle>Subscription history</CardTitle>
+        {subs.length === 0 ? (
+          <p className="text-stone-400 text-sm mt-2">No subscriptions yet.</p>
+        ) : (
+          <ul className="space-y-2 mt-3">
+            {subs.map((s) => (
+              <li key={s.id} className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5">
+                <span className="font-medium text-stone-700">{s.currency} {s.amount}/mo</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="success" className="capitalize">{s.status}</Badge>
+                  <span className="text-stone-400 text-xs">
+                    {new Date(s.periodStart).toLocaleDateString()} – {new Date(s.periodEnd).toLocaleDateString()}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     </div>
   );
 }

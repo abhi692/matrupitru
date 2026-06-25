@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
+import { AlertTriangle, Users, CalendarPlus, MapPin } from 'lucide-react';
 import { api } from '../../api/client';
+import { Card, CardTitle } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
+import { Input, Label } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+
+const SEVERITY_VARIANT = { emergency: 'danger', critical: 'danger', warning: 'warning', info: 'neutral' };
 
 export default function Console() {
   const [families, setFamilies] = useState([]);
@@ -40,72 +48,97 @@ export default function Console() {
     refresh();
   }
 
+  const openAlerts = alerts.filter((a) => !a.acknowledgedAt);
   const allParents = families.flatMap((f) => f.parents.map((p) => ({ ...p, familyName: f.users.find((u) => u.role === 'buyer')?.name })));
 
   return (
-    <div className="cm-console">
-      {error && <div className="error">{error}</div>}
+    <div className="space-y-6">
+      {error && <p className="text-rose-600 bg-rose-50 rounded-control px-4 py-3">{error}</p>}
 
-      <div className="card">
-        <h2>Alert queue</h2>
-        {alerts.filter((a) => !a.acknowledgedAt).length === 0 && <p className="muted">No open alerts.</p>}
-        <ul>
-          {alerts.filter((a) => !a.acknowledgedAt).map((a) => (
-            <li key={a.id} className={`alert-${a.severity}`}>
-              <strong>{a.type}</strong> — {a.severity} — {new Date(a.triggeredAt).toLocaleString()}
-              {' '}<button onClick={() => acknowledge(a.id)}>Acknowledge</button>
-            </li>
+      <Card className={openAlerts.length > 0 ? 'border-warm-200' : undefined}>
+        <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-warm-600" /> Alert queue</CardTitle>
+        {openAlerts.length === 0 ? (
+          <p className="text-stone-400 text-sm mt-2">No open alerts.</p>
+        ) : (
+          <ul className="space-y-2 mt-3">
+            {openAlerts.map((a) => (
+              <li key={a.id} className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Badge variant={SEVERITY_VARIANT[a.severity] || 'neutral'} className="capitalize">{a.severity}</Badge>
+                  <span className="font-medium text-stone-700 capitalize">{a.type.replace(/_/g, ' ')}</span>
+                  <span className="text-stone-400 text-xs">{new Date(a.triggeredAt).toLocaleString()}</span>
+                </div>
+                <Button size="sm" variant="subtle" onClick={() => acknowledge(a.id)}>Acknowledge</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-brand-500" /> Family roster</CardTitle>
+        <div className="space-y-4 mt-3">
+          {families.map((f) => (
+            <div key={f.id} className="border border-stone-100 rounded-control p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-stone-800">{f.users.find((u) => u.role === 'buyer')?.name || 'Family'}</span>
+                <Badge variant="brand" className="capitalize">{f.carePlan?.tier?.replace(/_/g, ' ') || 'no plan'}</Badge>
+              </div>
+              <ul className="mt-2 space-y-1">
+                {f.parents.map((p) => (
+                  <li key={p.id} className="flex items-center gap-1.5 text-sm text-stone-500">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" /> {p.user.name} — {p.address}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
-      </div>
+        </div>
+      </Card>
 
-      <div className="card">
-        <h2>Family roster</h2>
-        {families.map((f) => (
-          <div key={f.id} className="roster-row">
-            <strong>{f.users.find((u) => u.role === 'buyer')?.name || 'Family'}</strong> — {f.carePlan?.tier || 'no plan'}
-            <ul>
-              {f.parents.map((p) => (
-                <li key={p.id}>{p.user.name} — {p.address} (parentId: {p.id})</li>
+      <Card>
+        <CardTitle className="flex items-center gap-2"><CalendarPlus className="h-5 w-5 text-brand-500" /> Schedule a visit</CardTitle>
+        <form onSubmit={scheduleVisit} className="space-y-4 mt-3">
+          <div>
+            <Label>Parent</Label>
+            <Select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })}>
+              <option value="">Select parent</option>
+              {allParents.map((p) => (
+                <option key={p.id} value={p.id}>{p.user.name} ({p.familyName})</option>
               ))}
-            </ul>
+            </Select>
           </div>
-        ))}
-      </div>
-
-      <div className="card">
-        <h2>Schedule a visit</h2>
-        <form onSubmit={scheduleVisit} className="form">
-          <label>Parent</label>
-          <select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })}>
-            <option value="">Select parent</option>
-            {allParents.map((p) => (
-              <option key={p.id} value={p.id}>{p.user.name} ({p.familyName})</option>
-            ))}
-          </select>
-          <label>Caregiver</label>
-          <select value={form.caregiverId} onChange={(e) => setForm({ ...form, caregiverId: e.target.value })}>
-            <option value="">Unassigned</option>
-            {caregivers.map((c) => (
-              <option key={c.userId} value={c.userId}>{c.user.name}</option>
-            ))}
-          </select>
-          <label>Visit type</label>
-          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-            <option value="attendant">Attendant</option>
-            <option value="nurse">Nurse</option>
-            <option value="doctor">Doctor</option>
-            <option value="physio">Physio</option>
-            <option value="errand">Errand</option>
-          </select>
-          <label>Scheduled at</label>
-          <input type="datetime-local" value={form.scheduledAt} onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })} />
-          <label>Checklist (comma separated)</label>
-          <input value={form.checklist} onChange={(e) => setForm({ ...form, checklist: e.target.value })} placeholder="Check BP, Give medication" />
-          <button type="submit">Schedule</button>
-          {scheduleStatus && <p>{scheduleStatus}</p>}
+          <div>
+            <Label>Caregiver</Label>
+            <Select value={form.caregiverId} onChange={(e) => setForm({ ...form, caregiverId: e.target.value })}>
+              <option value="">Unassigned</option>
+              {caregivers.map((c) => (
+                <option key={c.userId} value={c.userId}>{c.user.name}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Visit type</Label>
+            <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+              <option value="attendant">Attendant</option>
+              <option value="nurse">Nurse</option>
+              <option value="doctor">Doctor</option>
+              <option value="physio">Physio</option>
+              <option value="errand">Errand</option>
+            </Select>
+          </div>
+          <div>
+            <Label>Scheduled at</Label>
+            <Input type="datetime-local" value={form.scheduledAt} onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })} />
+          </div>
+          <div>
+            <Label>Checklist (comma separated)</Label>
+            <Input value={form.checklist} onChange={(e) => setForm({ ...form, checklist: e.target.value })} placeholder="Check BP, Give medication" />
+          </div>
+          <Button type="submit" size="lg" className="w-full">Schedule</Button>
+          {scheduleStatus && <p className="text-sm text-stone-500 text-center">{scheduleStatus}</p>}
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

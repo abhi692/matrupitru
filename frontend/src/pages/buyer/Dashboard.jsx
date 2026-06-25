@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import { MapPin, ShieldAlert, CheckCircle2, AlertTriangle, CalendarClock, Activity, CreditCard, Stethoscope } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+
+const SEVERITY_VARIANT = { emergency: 'danger', critical: 'danger', warning: 'warning', info: 'neutral' };
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -17,92 +23,153 @@ export default function Dashboard() {
   }, [user]);
 
   if (!user?.familyId) return <Navigate to="/buyer/onboarding" replace />;
-  if (error) return <div className="error">{error}</div>;
-  if (!data) return <div className="loading">Loading dashboard...</div>;
+  if (error) return <p className="text-rose-600 bg-rose-50 rounded-control px-4 py-3">{error}</p>;
+  if (!data) return <p className="text-stone-400 text-center py-12">Loading dashboard...</p>;
 
   const parent = data.parents[0];
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-head">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h2>{parent ? parent.user.name : 'Your parent'}</h2>
-          <p className="muted">{parent?.address}</p>
+          <h2 className="text-2xl font-bold text-stone-900">{parent ? parent.user.name : 'Your parent'}</h2>
+          {parent?.address && (
+            <p className="text-stone-500 text-sm mt-1 flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5" /> {parent.address}
+            </p>
+          )}
         </div>
-        <Link className="sos-link" to="/buyer/sos">View / raise SOS</Link>
+        <Link to="/buyer/sos">
+          <Button variant="emergency">
+            <ShieldAlert className="h-4 w-4" /> View / raise SOS
+          </Button>
+        </Link>
       </div>
 
       {data.openAlerts.length > 0 && (
-        <div className="card alert-card">
-          <h3>Open alerts</h3>
-          <ul>
+        <Card className="border-warm-200 bg-warm-50/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-warm-600">
+              <AlertTriangle className="h-5 w-5" /> Open alerts
+            </CardTitle>
+          </CardHeader>
+          <ul className="space-y-2">
             {data.openAlerts.map((a) => (
-              <li key={a.id} className={`alert-${a.severity}`}>
-                <strong>{a.type}</strong> — {a.severity} — {new Date(a.triggeredAt).toLocaleString()}
+              <li key={a.id} className="flex items-center justify-between text-sm bg-white rounded-control px-3 py-2 border border-stone-100">
+                <span className="font-medium text-stone-700 capitalize">{a.type.replace(/_/g, ' ')}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant={SEVERITY_VARIANT[a.severity] || 'neutral'} className="capitalize">{a.severity}</Badge>
+                  <span className="text-stone-400 text-xs">{new Date(a.triggeredAt).toLocaleString()}</span>
+                </div>
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
-      <div className="grid-2">
-        <div className="card">
-          <h3>Upcoming visits</h3>
-          {data.upcomingVisits.length === 0 && <p className="muted">No visits scheduled.</p>}
-          <ul>
-            {data.upcomingVisits.map((v) => (
-              <li key={v.id}>
-                {v.type} — {new Date(v.scheduledAt).toLocaleString()} — <em>{v.status}</em>
-              </li>
-            ))}
-          </ul>
+      <div className="grid sm:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-brand-500" /> Upcoming visits</CardTitle>
+          </CardHeader>
+          {data.upcomingVisits.length === 0 ? (
+            <p className="text-stone-400 text-sm">No visits scheduled.</p>
+          ) : (
+            <ul className="space-y-2">
+              {data.upcomingVisits.map((v) => (
+                <li key={v.id} className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5">
+                  <span className="font-medium text-stone-700 capitalize">{v.type}</span>
+                  <span className="text-stone-400 text-xs text-right">
+                    {new Date(v.scheduledAt).toLocaleString()}
+                    <br />
+                    <span className="capitalize text-brand-600">{v.status}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-brand-500" /> Recent activity — proof of care</CardTitle>
+          </CardHeader>
+          {data.recentVisits.length === 0 ? (
+            <p className="text-stone-400 text-sm">No completed visits yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {data.recentVisits.map((v) => (
+                <li key={v.id}>
+                  <Link
+                    to={`/buyer/visits/${v.id}`}
+                    className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5 hover:border-brand-300 hover:bg-brand-50/40 transition-colors"
+                  >
+                    <span>
+                      <span className="font-medium text-stone-700 capitalize">{v.type}</span>
+                      <br />
+                      <span className="text-stone-400 text-xs">{new Date(v.checkOutAt).toLocaleString()}</span>
+                    </span>
+                    <span className="text-right text-xs">
+                      <Badge variant={v.geoVerified ? 'success' : 'warning'}>
+                        {v.geoVerified ? 'Geo-verified' : 'Not verified'}
+                      </Badge>
+                      <br />
+                      <span className="text-stone-400 mt-1 inline-block">{v.proofs.length} proof artifact(s)</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-brand-500" /> Vitals trend (latest readings)</CardTitle>
+        </CardHeader>
+        {data.vitals.length === 0 ? (
+          <p className="text-stone-400 text-sm">No vitals recorded yet.</p>
+        ) : (
+          <div className="overflow-x-auto -mx-2">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-stone-400 text-xs uppercase tracking-wide">
+                  <th className="px-2 py-2 font-medium">Type</th>
+                  <th className="px-2 py-2 font-medium">Value</th>
+                  <th className="px-2 py-2 font-medium">Recorded</th>
+                  <th className="px-2 py-2 font-medium">Flagged</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.vitals.map((v) => (
+                  <tr key={v.id} className={v.flagged ? 'bg-warm-50/60' : ''}>
+                    <td className="px-2 py-2.5 capitalize font-medium text-stone-700 border-t border-stone-100">{v.type}</td>
+                    <td className="px-2 py-2.5 border-t border-stone-100">{v.value} {v.unit}</td>
+                    <td className="px-2 py-2.5 text-stone-500 border-t border-stone-100">{new Date(v.recordedAt).toLocaleString()}</td>
+                    <td className="px-2 py-2.5 border-t border-stone-100">
+                      {v.flagged ? <Badge variant="warning">Flagged</Badge> : <span className="text-stone-400">No</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <CardTitle className="flex items-center gap-2"><Stethoscope className="h-5 w-5 text-brand-500" /> Care plan</CardTitle>
+          <p className="text-sm text-stone-500 mt-1">
+            Tier: <span className="font-semibold text-stone-700 capitalize">{data.carePlan?.tier?.replace(/_/g, ' ')}</span>
+          </p>
         </div>
-
-        <div className="card">
-          <h3>Recent activity — proof of care</h3>
-          {data.recentVisits.length === 0 && <p className="muted">No completed visits yet.</p>}
-          <ul>
-            {data.recentVisits.map((v) => (
-              <li key={v.id}>
-                <Link to={`/buyer/visits/${v.id}`}>
-                  {v.type} — {new Date(v.checkOutAt).toLocaleString()}
-                  {v.geoVerified ? ' ✅ geo-verified' : ' ⚠️ not geo-verified'}
-                  {' — '}
-                  {v.proofs.length} proof artifact(s)
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <div className="flex gap-2">
+          <Link to="/buyer/billing"><Button variant="outline" size="sm"><CreditCard className="h-3.5 w-3.5" /> Billing</Button></Link>
+          <Link to="/buyer/book"><Button variant="subtle" size="sm">Book a service</Button></Link>
         </div>
-      </div>
-
-      <div className="card">
-        <h3>Vitals trend (latest readings)</h3>
-        {data.vitals.length === 0 && <p className="muted">No vitals recorded yet.</p>}
-        <table>
-          <thead>
-            <tr><th>Type</th><th>Value</th><th>Recorded</th><th>Flagged</th></tr>
-          </thead>
-          <tbody>
-            {data.vitals.map((v) => (
-              <tr key={v.id} className={v.flagged ? 'flagged-row' : ''}>
-                <td>{v.type}</td>
-                <td>{v.value} {v.unit}</td>
-                <td>{new Date(v.recordedAt).toLocaleString()}</td>
-                <td>{v.flagged ? 'Yes' : 'No'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="card">
-        <h3>Care plan</h3>
-        <p>Tier: <strong>{data.carePlan?.tier}</strong></p>
-        <Link to="/buyer/billing">Manage billing / subscription</Link>
-        {' · '}
-        <Link to="/buyer/book">Book a service</Link>
-      </div>
+      </Card>
     </div>
   );
 }

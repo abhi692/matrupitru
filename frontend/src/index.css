@@ -1,110 +1,47 @@
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
-  background: #f7f7f5;
-  color: #1a1a1a;
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Warm healthcare palette, matched to the marketing landing page */
+  --color-brand-50: #e1f5ee;
+  --color-brand-100: #c3ebdd;
+  --color-brand-200: #9adfc8;
+  --color-brand-300: #6ccfae;
+  --color-brand-400: #3bbd92;
+  --color-brand-500: #1d9e75;
+  --color-brand-600: #0f6e56;
+  --color-brand-700: #0c5945;
+  --color-brand-800: #085041;
+  --color-brand-900: #063b30;
+
+  --color-cream-50: #fefdfb;
+  --color-cream-100: #f7f7f5;
+  --color-cream-200: #f0efe9;
+
+  --color-warm-50: #fff8e6;
+  --color-warm-200: #ffe6a3;
+  --color-warm-600: #b06000;
+
+  --color-rose-50: #fde8ea;
+  --color-rose-200: #f6b9c0;
+  --color-rose-600: #b00020;
+  --color-rose-700: #8c0019;
+
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+
+  --shadow-soft: 0 1px 2px rgba(15, 110, 86, 0.04), 0 8px 24px -8px rgba(15, 110, 86, 0.10);
+  --shadow-soft-lg: 0 2px 8px rgba(15, 110, 86, 0.06), 0 20px 40px -16px rgba(15, 110, 86, 0.14);
 }
 
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1.5rem;
-  background: #fff;
-  border-bottom: 1px solid #e5e5e5;
+@layer base {
+  body {
+    @apply bg-cream-100 text-stone-800 antialiased;
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3 {
+    @apply font-semibold tracking-tight text-stone-900;
+  }
 }
-.app-header-left { display: flex; gap: 0.75rem; align-items: center; }
-.logo { font-weight: 700; color: #0F6E56; font-size: 18px; }
-.role-badge {
-  background: #E1F5EE;
-  color: #085041;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  text-transform: capitalize;
-}
-.app-header-right { display: flex; gap: 1rem; align-items: center; }
-.app-main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
-
-button {
-  background: #1D9E75;
-  color: #fff;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-}
-button:hover { background: #0F6E56; }
-button:disabled { background: #ccc; cursor: not-allowed; }
-
-input, select {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  margin: 4px 0 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-label { font-size: 13px; font-weight: 600; color: #555; }
-
-.card {
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 14px;
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
-}
-
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
-@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
-
-.muted { color: #888; }
-.error { color: #b00020; background: #fde8ea; padding: 8px 12px; border-radius: 8px; margin-bottom: 1rem; }
-.ok-text { color: #0F6E56; }
-.warn-text { color: #b06000; }
-
-.alert-emergency { color: #b00020; font-weight: 600; }
-.alert-critical { color: #b00020; }
-.alert-warning { color: #b06000; }
-.alert-info { color: #555; }
-.flagged-row { background: #fff7e6; }
-
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 14px; }
-
-.auth-screen { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
-.auth-card { background: #fff; border-radius: 14px; padding: 2rem; width: 360px; box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
-.auth-card h1 { color: #0F6E56; margin: 0; font-size: 28px; }
-.subtitle { color: #888; font-size: 13px; margin-bottom: 1.5rem; }
-.demo-accounts { margin-top: 1.5rem; font-size: 13px; }
-.demo-accounts ul { list-style: none; padding: 0; }
-.demo-accounts button { background: none; color: #0F6E56; padding: 2px 0; text-decoration: underline; font-size: 13px; }
-.demo-accounts button:hover { background: none; }
-
-.dashboard-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-.sos-link { background: #b00020; color: #fff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-
-.sos-button { background: #b00020; font-weight: 700; font-size: 16px; padding: 14px 20px; }
-.sos-button:hover { background: #8c0019; }
-.sos-button.big { font-size: 20px; width: 100%; margin-bottom: 1rem; }
-
-.steps { color: #888; font-size: 13px; margin-bottom: 1rem; }
-.row { display: flex; gap: 1rem; }
-.row > div, .row > input { flex: 1; }
-
-.parent-app { max-width: 480px; margin: 0 auto; }
-.big-greeting { font-size: 28px; color: #0F6E56; }
-.big-text { font-size: 18px; }
-button.big { font-size: 18px; padding: 14px; width: 100%; }
-.confirm-row { margin-bottom: 1rem; }
-
-.visit-card { margin-bottom: 1rem; }
-.roster-row { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
-.loading { padding: 2rem; text-align: center; color: #888; }
-
-h1, h2, h3 { color: #1a1a1a; }
-a { color: #0F6E56; }
