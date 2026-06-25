@@ -1,0 +1,236 @@
+// MatruPitru — Phase 1 data model (see System Design doc §4)
+// SQLite for local dev; swap provider to "postgresql" for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Family {
+  id             String   @id @default(uuid())
+  primaryBuyerId String
+  billingCurrency String  @default("USD")
+  createdAt      DateTime @default(now())
+
+  users          User[]
+  parents        Parent[]
+  carePlan       CarePlan?
+  bookings       ServiceBooking[]
+  payments       Payment[]
+  subscriptions  Subscription[]
+  threads        Thread[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  role         String   // buyer | parent | care_manager | caregiver | admin
+  name         String
+  phone        String   @unique
+  email        String?
+  passwordHash String
+  locale       String   @default("en")
+  timezone     String   @default("Asia/Kolkata")
+  createdAt    DateTime @default(now())
+
+  familyId     String?
+  family       Family?  @relation(fields: [familyId], references: [id])
+
+  parentProfile  Parent?    @relation("UserParentProfile")
+  caregiverProfile Caregiver? @relation("UserCaregiverProfile")
+
+  carePlansManaged CarePlan[] @relation("CareManagerPlans")
+  visitsAssigned   Visit[]    @relation("CaregiverVisits")
+  visitsScheduled  Visit[]    @relation("ScheduledByUser")
+  alertsAcknowledged Alert[]  @relation("AlertAcknowledgedBy")
+  messages         Message[]
+}
+
+model Parent {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation("UserParentProfile", fields: [userId], references: [id])
+  familyId         String
+  family           Family   @relation(fields: [familyId], references: [id])
+
+  dob              DateTime?
+  address          String
+  geoLat           Float?
+  geoLng           Float?
+  languagesJson    String   @default("[]")
+  mobilityLevel    String   @default("independent")
+  techComfort      String   @default("low")
+  conditionsJson   String   @default("[]")
+  allergiesJson    String   @default("[]")
+  medicationsJson  String   @default("[]")
+  emergencyContactsJson String @default("[]")
+  preferredHospital String?
+  notes            String?
+
+  visits           Visit[]
+  vitals           VitalsReading[]
+  bookings         ServiceBooking[]
+  alerts           Alert[]
+}
+
+model CarePlan {
+  id               String   @id @default(uuid())
+  familyId         String   @unique
+  family           Family   @relation(fields: [familyId], references: [id])
+  tier             String   // basic | standard | premium_nri
+  recurringServicesJson String @default("[]")
+  careManagerId    String?
+  careManager      User?    @relation("CareManagerPlans", fields: [careManagerId], references: [id])
+  startDate        DateTime @default(now())
+  status           String   @default("active")
+}
+
+model Visit {
+  id            String   @id @default(uuid())
+  parentId      String
+  parent        Parent   @relation(fields: [parentId], references: [id])
+  caregiverId   String?
+  caregiver     User?    @relation("CaregiverVisits", fields: [caregiverId], references: [id])
+  scheduledById String?
+  scheduledBy   User?    @relation("ScheduledByUser", fields: [scheduledById], references: [id])
+
+  type          String   // attendant | nurse | doctor | physio | errand
+  scheduledAt   DateTime
+  status        String   @default("scheduled") // scheduled|enroute|in_progress|completed|missed|cancelled
+
+  checkInAt     DateTime?
+  checkInGeoLat Float?
+  checkInGeoLng Float?
+  checkOutAt    DateTime?
+  checkOutGeoLat Float?
+  checkOutGeoLng Float?
+
+  taskChecklistJson String @default("[]")
+  notes         String?
+
+  geoVerified   Boolean  @default(false)
+  parentConfirmedAt DateTime?
+
+  proofs        ProofArtifact[]
+  vitals        VitalsReading[]
+
+  createdAt     DateTime @default(now())
+}
+
+model ProofArtifact {
+  id          String   @id @default(uuid())
+  visitId     String
+  visit       Visit    @relation(fields: [visitId], references: [id])
+  type        String   // photo | vitals | signature | parent_confirmation
+  storageUrl  String
+  capturedAt  DateTime @default(now())
+  capturedBy  String
+  metadataJson String  @default("{}")
+}
+
+model VitalsReading {
+  id         String   @id @default(uuid())
+  parentId   String
+  parent     Parent   @relation(fields: [parentId], references: [id])
+  visitId    String?
+  visit      Visit?   @relation(fields: [visitId], references: [id])
+  type       String   // bp | sugar | spo2 | weight | temp | pulse
+  value      String
+  unit       String
+  recordedAt DateTime @default(now())
+  source     String   // caregiver | device | self
+  flagged    Boolean  @default(false)
+}
+
+model ServiceBooking {
+  id            String   @id @default(uuid())
+  familyId      String
+  family        Family   @relation(fields: [familyId], references: [id])
+  parentId      String
+  parent        Parent   @relation(fields: [parentId], references: [id])
+  serviceCatalogId String
+  vendorId      String?
+  status        String   @default("requested")
+  scheduledAt   DateTime?
+  price         Float
+  currency      String   @default("INR")
+  paymentId     String?
+  createdAt     DateTime @default(now())
+}
+
+model Alert {
+  id             String   @id @default(uuid())
+  parentId       String
+  parent         Parent   @relation(fields: [parentId], references: [id])
+  severity       String   // info | warning | critical | emergency
+  type           String   // missed_visit | vitals_out_of_range | sos | med_missed
+  triggeredAt    DateTime @default(now())
+  acknowledgedById String?
+  acknowledgedBy User?    @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  acknowledgedAt DateTime?
+  resolution     String?
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  amount      Float
+  currency    String
+  method      String
+  gatewayRef  String?
+  type        String   // subscription | one_time
+  status      String   @default("succeeded")
+  createdAt   DateTime @default(now())
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  amount      Float
+  currency    String
+  periodStart DateTime
+  periodEnd   DateTime
+  status      String   @default("active")
+}
+
+model Caregiver {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation("UserCaregiverProfile", fields: [userId], references: [id])
+  verificationStatus String   @default("pending")
+  skillsJson         String   @default("[]")
+  serviceCitiesJson  String   @default("[]")
+  rating             Float    @default(0)
+  backgroundCheckRef String?
+  availability       String   @default("available")
+}
+
+model Thread {
+  id        String   @id @default(uuid())
+  familyId  String
+  family    Family   @relation(fields: [familyId], references: [id])
+  messages  Message[]
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  threadId  String
+  thread    Thread   @relation(fields: [threadId], references: [id])
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id        String   @id @default(uuid())
+  type      String   // visit.completed | vitals.recorded | sos.raised ...
+  payloadJson String
+  createdAt DateTime @default(now())
+}

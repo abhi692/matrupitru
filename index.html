@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MatruPitru — Aapke Parents Ki Care, Aapke Jaisi</title>
+  <meta name="description" content="Aap door ho toh kya — MatruPitru aapke parents ka khayal rakhega. Daily check-in, medicine reminder, emergency alert aur companionship." />
+  <meta property="og:title" content="MatruPitru — Elder Care for Indian Families" />
+  <meta property="og:description" content="Ab parents akele nahi honge. Daily care, medicine reminders, emergency alerts — sab ek jagah." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=1200&q=80" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #1D9E75;
+      --green-dark: #0F6E56;
+      --green-light: #E1F5EE;
+      --green-text: #085041;
+      --text-primary: #1a1a1a;
+      --text-secondary: #555;
+      --text-muted: #888;
+      --bg: #fff;
+      --bg-surface: #f7f7f5;
+      --border: #e5e5e5;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+    }
+    .nav-logo { font-size: 20px; font-weight: 600; color: var(--green-dark); }
+    .nav-logo span { color: var(--text-primary); }
+    .nav-cta {
+      padding: 8px 18px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: var(--green-dark); }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 4rem 1.5rem 3rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--green-light);
+      color: var(--green-text);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 5px 16px;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 1.25rem;
+      color: var(--text-primary);
+    }
+    .hero h1 em { font-style: normal; color: var(--green-dark); }
+    .hero p {
+      font-size: 17px;
+      color: var(--text-secondary);
+      max-width: 480px;
+      margin: 0 auto 2rem;
+    }
+    .hero-img {
+      width: 100%;
+      max-width: 680px;
+      height: 320px;
+      object-fit: cover;
+      border-radius: var(--radius-lg);
+      margin: 0 auto 2.5rem;
+    }
+    .waitlist-form {
+      display: flex;
+      gap: 10px;
+      max-width: 440px;
+      margin: 0 auto 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .waitlist-form input {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .waitlist-form input:focus { border-color: var(--green); }
+    .waitlist-form button {
+      padding: 12px 24px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s;
+    }
+    .waitlist-form button:hover { background: var(--green-dark); }
+    .form-note { font-size: 13px; color: var(--text-muted); }
+    .success-msg {
+      display: none;
+      font-size: 15px;
+      color: var(--green-dark);
+      font-weight: 500;
+      padding: 10px;
+      background: var(--green-light);
+      border-radius: var(--radius-md);
+      max-width: 360px;
+      margin: 0.5rem auto 0;
+    }
+
+    /* SECTION WRAPPER */
+    .section { padding: 4rem 1.5rem; max-width: 900px; margin: 0 auto; }
+    .section-alt { background: var(--bg-surface); }
+    .section-alt .section { padding: 4rem 1.5rem; }
+    .section-title {
+      font-size: 26px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .divider { height: 1px; background: var(--border); }
+
+    /* PROBLEM */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+      align-items: center;
+    }
+    .problem-grid img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      border-radius: var(--radius-lg);
+    }
+    .problem-text h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+    }
+    .problem-text p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 1rem;
+    }
+
+    /* STATS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 3rem;
+    }
+    .stat-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-num { font-size: 28px; font-weight: 600; color: var(--green-dark); }
+    .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 5px; line-height: 1.4; }
+
+    /* FEATURES */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+    .feature-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .feature-card img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+    }
+    .feature-body { padding: 1.25rem; }
+    .feature-icon { font-size: 22px; margin-bottom: 8px; }
+    .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .feature-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* HOW IT WORKS */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .step { text-align: center; padding: 1.5rem 1rem; }
+    .step-num {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--green-light);
+      color: var(--green-dark);
+      font-weight: 600;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem;
+    }
+    .step h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .step p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+
+    /* TESTIMONIALS */
+    .testi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .testi-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+    }
+    .testi-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .testi-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+    .testi-name { font-size: 14px; font-weight: 600; }
+    .testi-city { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .testi-quote { font-size: 14px; color: var(--text-secondary); line-height: 1.7; font-style: italic; }
+    .stars { color: #f59e0b; font-size: 13px; margin-bottom: 8px; }
+
+    /* PRICING */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+    .plan {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+    }
+    .plan.featured { border: 2px solid var(--green); position: relative; }
+    .plan-badge {
+      display: inline-block;
+      background: var(--green-light);
+      color: var(--green-text);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+    .plan h3 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .plan-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 1rem; }
+    .plan-price { font-size: 32px; font-weight: 700; color: var(--text-primary); }
+    .plan-price span { font-size: 15px; font-weight: 400; color: var(--text-secondary); }
+    .plan-divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+    .plan ul { list-style: none; }
+    .plan ul li {
+      font-size: 14px;
+      color: var(--text-secondary);
+      padding: 5px 0;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .plan ul li .check { color: var(--green); font-weight: 700; flex-shrink: 0; }
+    .plan-btn {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 12px;
+      background: var(--green-light);
+      color: var(--green-dark);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s;
+    }
+    .plan-btn:hover { background: #c5f0de; }
+    .plan.featured .plan-btn { background: var(--green); color: #fff; }
+    .plan.featured .plan-btn:hover { background: var(--green-dark); }
+
+    /* FOOTER CTA */
+    .footer-cta {
+      text-align: center;
+      padding: 5rem 1.5rem;
+      background: var(--green-dark);
+      color: #fff;
+    }
+    .footer-cta h2 { font-size: 28px; font-weight: 600; margin-bottom: 0.75rem; }
+    .footer-cta p { font-size: 16px; opacity: 0.8; margin-bottom: 2rem; }
+    .footer-cta .waitlist-form input { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; }
+    .footer-cta .waitlist-form input::placeholder { color: rgba(255,255,255,0.6); }
+    .footer-cta .waitlist-form button { background: #fff; color: var(--green-dark); }
+    .footer-cta .waitlist-form button:hover { background: #f0fdf8; }
+    .footer-cta .form-note { opacity: 0.6; }
+    .footer-cta .success-msg { background: rgba(255,255,255,0.15); color: #fff; }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 600px) {
+      .problem-grid { grid-template-columns: 1fr; }
+      .problem-grid img { height: 200px; }
+      nav { padding: 1rem; }
+      .hero { padding: 2.5rem 1rem 2rem; }
+      .hero-img { height: 220px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Matru<span>Pitru</span></div>
+  <button class="nav-cta" onclick="document.getElementById('hero-phone').focus()">Join Waitlist</button>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">Ab parents akele nahi honge</div>
+  <h1>Aapke <em>Mata-Pita</em> ki care,<br>aapke jaisi</h1>
+  <p>Aap chahe Mumbai mein ho ya Bangalore mein — MatruPitru ensure karta hai ki aapke parents safe, healthy aur connected rahein. Har roz.</p>
+  <img class="hero-img" src="https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?w=900&q=80" alt="Elderly couple smiling together at home" />
+  <div class="waitlist-form">
+    <input type="tel" id="hero-phone" placeholder="Apna phone number daalo" maxlength="10" />
+    <button onclick="handleWaitlist('hero-phone', 'hero-success')">Join Waitlist — Free</button>
+  </div>
+  <p class="form-note" style="margin-top: 0.5rem;">Early access ke liye register karo — bilkul free</p>
+  <div class="success-msg" id="hero-success">✓ Done! Hum aapko jaldi contact karenge.</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- PROBLEM -->
+<div class="section">
+  <div class="problem-grid">
+    <img src="https://images.unsplash.com/photo-1609220136736-443140cffec6?w=700&q=80" alt="Elderly person sitting alone at home" />
+    <div class="problem-text">
+      <h2>Aap akele nahi ho is problem mein</h2>
+      <p>India mein lakho bete-betiyan apne ghar se door kaam karte hain. Aur peeche chod aate hain apne aged parents ko — jo akele rahte hain, medicine bhul jaate hain, aur kabhi kabhi emergency mein koi nahi hota paas mein.</p>
+      <p>MatruPitru woh trusted companion hai jo aapke parents ke saath har roz hota hai — jab aap nahi hote.</p>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">104M+</div><div class="stat-label">60+ age ke log India mein</div></div>
+    <div class="stat-card"><div class="stat-num">71%</div><div class="stat-label">Nuclear families mein akele parents</div></div>
+    <div class="stat-card"><div class="stat-num">3 in 5</div><div class="stat-label">Seniors medicine time pe nahi lete</div></div>
+    <div class="stat-card"><div class="stat-num">24/7</div><div class="stat-label">Hum har waqt available hain</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<div class="section-alt">
+  <div class="section">
+    <div class="section-title">Hum kya karte hain</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <img src="https://images.unsplash.com/photo-1516534775068-ba3e7458af70?w=500&q=80" alt="Friendly phone call" />
+        <div class="feature-body">
+          <div class="feature-icon">📞</div>
+          <h3>Daily check-in call</h3>
+          <p>Har subah ek friendly call aapke parents ko. Aapko daily WhatsApp report milegi — sab theek hai ya nahi.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&q=80" alt="Medicine and prescription" />
+        <div class="feature-body">
+          <div class="feature-icon">💊</div>
+          <h3>Medicine reminder</h3>
+          <p>Time pe reminder call. Medicine khatam hone se pehle doorstep delivery bhi arrange kar sakte hain.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=500&q=80" alt="Doctor consultation" />
+        <div class="feature-body">
+          <div class="feature-icon">🩺</div>
+          <h3>Doctor coordination</h3>
+          <p>Appointment booking, escort, follow-up — sab hamare saath. Aapko kuch nahi karna.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=500&q=80" alt="Friendly conversation" />
+        <div class="feature-body">
+          <div class="feature-icon">❤️</div>
+          <h3>Companionship call</h3>
+          <p>Loneliness asli problem hai. Hamare trained companions haftey mein 2-3 baar baat karte hain.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=500&q=80" alt="Emergency alert" />
+        <div class="feature-body">
+          <div class="feature-icon">🚨</div>
+          <h3>Emergency alert</h3>
+          <p>Kuch bhi unusual laga toh turant aapko aur local emergency contact ko alert bheja jaata hai.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=500&q=80" alt="Weekly report" />
+        <div class="feature-body">
+          <div class="feature-icon">📋</div>
+          <h3>Weekly report</h3>
+          <p>Health, mood, activities — ek simple summary aapke WhatsApp pe. Door raho, informed raho.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<div class="section">
+  <div class="section-title">Kaise kaam karta hai?</div>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Register karo</h3>
+      <p>Apna aur parents ka basic info do. Sirf 5 minute ka kaam.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Plan chuno</h3>
+      <p>₹299 se shuru. Apni zaroorat ke hisaab se plan select karo.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Hum shuru karte hain</h3>
+      <p>Hamare care team se parents ki pehli call usi din.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Aap relax karo</h3>
+      <p>Har update WhatsApp pe. Parents safe, aap tension free.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- TESTIMONIALS -->
+<div class="section-alt">
+  <div class="section">
+    <div class="section-title">Logon ne kya kaha</div>
+    <div class="testi-grid">
+      <div class="testi-card">
+        <div class="stars">★★★★★</div>
+        <div class="testi-header">
+          <img class="testi-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" alt="Rahul" />
+          <div><div class="testi-name">Rahul Mehta</div><div class="testi-city">Pune → Bangalore</div></div>
+        </div>
+        <p class="testi-quote">"Mere papa akele rehte hain Pune mein. Roz unki chinta rehti thi. Aisi service ka bahut zaroorat tha — kab launch ho raha hai?"</p>
+      </div>
+      <div class="testi-card">
+        <div class="stars">★★★★★</div>
+        <div class="testi-header">
+          <img class="testi-avatar" src="https://images.unsplash.com/photo-1494790108755-2616b612b647?w=100&q=80" alt="Priya" />
+          <div><div class="testi-name">Priya Sharma</div><div class="testi-city">Lucknow → Mumbai</div></div>
+        </div>
+        <p class="testi-quote">"Meri maa medicine bhul jaati thi. Koi aisa service chahiye tha jo regularly unka khayal rakhe jab hum nahi hain."</p>
+      </div>
+      <div class="testi-card">
+        <div class="stars">★★★★★</div>
+        <div class="testi-header">
+          <img class="testi-avatar" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80" alt="Arjun" />
+          <div><div class="testi-name">Arjun Nair</div><div class="testi-city">Kochi → Hyderabad</div></div>
+        </div>
+        <p class="testi-quote">"₹599 mein itna peace of mind? Yeh toh bahut sasta hai. Main toh pehle din hi subscribe karunga."</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- PRICING -->
+<div class="section">
+  <div class="section-title">Kitna lagega?</div>
+  <div class="pricing-grid">
+    <div class="plan">
+      <h3>Basic</h3>
+      <p class="plan-desc">Shuruat ke liye perfect</p>
+      <div class="plan-price">₹299 <span>/month</span></div>
+      <div class="plan-divider"></div>
+      <ul>
+        <li><span class="check">✓</span> Daily check-in call</li>
+        <li><span class="check">✓</span> Medicine reminder</li>
+        <li><span class="check">✓</span> Weekly WhatsApp report</li>
+        <li><span class="check">✓</span> Email support</li>
+      </ul>
+      <button class="plan-btn" onclick="document.getElementById('hero-phone').focus(); window.scrollTo({top:0,behavior:'smooth'})">Get Started</button>
+    </div>
+    <div class="plan featured">
+      <div class="plan-badge">Sabse popular</div>
+      <h3>Care+</h3>
+      <p class="plan-desc">Sabse zyada choose kiya jaata hai</p>
+      <div class="plan-price">₹599 <span>/month</span></div>
+      <div class="plan-divider"></div>
+      <ul>
+        <li><span class="check">✓</span> Sab Basic features</li>
+        <li><span class="check">✓</span> Emergency alert system</li>
+        <li><span class="check">✓</span> Companionship calls (2x/week)</li>
+        <li><span class="check">✓</span> Doctor appointment help</li>
+        <li><span class="check">✓</span> Priority support</li>
+      </ul>
+      <button class="plan-btn" onclick="document.getElementById('hero-phone').focus(); window.scrollTo({top:0,behavior:'smooth'})">Get Started</button>
+    </div>
+    <div class="plan">
+      <h3>Premium</h3>
+      <p class="plan-desc">Complete peace of mind</p>
+      <div class="plan-price">₹999 <span>/month</span></div>
+      <div class="plan-divider"></div>
+      <ul>
+        <li><span class="check">✓</span> Sab Care+ features</li>
+        <li><span class="check">✓</span> Dedicated care manager</li>
+        <li><span class="check">✓</span> Medicine home delivery</li>
+        <li><span class="check">✓</span> Companionship (daily)</li>
+        <li><span class="check">✓</span> 24/7 emergency response</li>
+      </ul>
+      <button class="plan-btn" onclick="document.getElementById('hero-phone').focus(); window.scrollTo({top:0,behavior:'smooth'})">Get Started</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER CTA -->
+<div class="footer-cta">
+  <h2>Ready ho? Aaj hi join karo.</h2>
+  <p>Waitlist join karo aur early access ke saath special launch price pao.</p>
+  <div class="waitlist-form">
+    <input type="tel" id="footer-phone" placeholder="Apna phone number daalo" maxlength="10" />
+    <button onclick="handleWaitlist('footer-phone', 'footer-success')">Join Waitlist — Free</button>
+  </div>
+  <p class="form-note" style="margin-top: 0.5rem;">Koi spam nahi. Sirf launch update milegi.</p>
+  <div class="success-msg" id="footer-success" style="margin: 0.75rem auto 0;">✓ Done! Hum aapko jaldi contact karenge.</div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 MatruPitru. Har Mata-Pita deserve karte hain best care. 🙏</p>
+</footer>
+
+<script>
+  function handleWaitlist(inputId, successId) {
+    var input = document.getElementById(inputId);
+    var val = input.value.trim();
+    if (val.length < 10 || isNaN(val)) {
+      input.style.borderColor = '#ef4444';
+      input.focus();
+      return;
+    }
+    input.style.borderColor = '';
+    input.value = '';
+    document.getElementById(successId).style.display = 'block';
+    // TODO: Send to your backend / Google Sheet / Airtable
+    console.log('Waitlist signup:', val);
+  }
+
+  // Allow only numbers in phone inputs
+  document.querySelectorAll('input[type="tel"]').forEach(function(el) {
+    el.addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        var btn = this.nextElementSibling;
+        if (btn) btn.click();
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
