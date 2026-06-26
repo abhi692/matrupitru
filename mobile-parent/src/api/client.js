@@ -28,8 +28,23 @@ async function request(method, path, body) {
   return data;
 }
 
+async function upload(path, file) {
+  const headers = {};
+  const token = await getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const formData = new FormData();
+  formData.append('file', { uri: file.uri, name: file.fileName || 'photo.jpg', type: file.mimeType || 'image/jpeg' });
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', headers, body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Upload failed: ${res.status}`);
+  return data;
+}
+
 export const api = {
   get: (path) => request('GET', path),
   post: (path, body) => request('POST', path, body),
   patch: (path, body) => request('PATCH', path, body),
+  upload,
 };

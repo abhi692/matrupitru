@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, AppState } from 'react-native';
 import * as Speech from 'expo-speech';
-import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { scheduleAllReminders } from '../lib/notifications';
+import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { scheduleAllReminders } from '../../lib/notifications';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();

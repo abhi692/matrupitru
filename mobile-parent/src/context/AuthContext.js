@@ -24,9 +24,6 @@ export function AuthProvider({ children }) {
 
   async function login(phone, password) {
     const data = await api.post('/auth/login', { phone, password });
-    if (data.user.role !== 'parent') {
-      throw new Error('This app is for parent accounts only.');
-    }
     await setToken(data.token);
     setUser(data.user);
     return data.user;

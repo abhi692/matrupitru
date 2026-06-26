@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
-import HomeScreen from './src/screens/HomeScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 import { ensureNotificationPermissions, setupAndroidChannel } from './src/lib/notifications';
 
 function Root() {
@@ -22,7 +22,7 @@ function Root() {
     );
   }
 
-  return user ? <HomeScreen /> : <LoginScreen />;
+  return user ? <AppNavigator /> : <LoginScreen />;
 }
 
 export default function App() {

@@ -1,23 +1,32 @@
-# MatruPitru — Parent App (React Native / Expo)
+# MatruPitru — Mobile App (React Native / Expo)
 
-A real native app for the parent, built specifically to fix the thing the web version
-couldn't do: **medication alarms that fire even when the app is closed.** Everything
-else (buyer, Care Manager, caregiver, admin) stays the website — they don't need
-OS-level background notifications, so rebuilding them natively wasn't worth it.
+A real native app covering **all five roles** — buyer, parent, Care Manager, caregiver, admin —
+with the same role-based-on-sign-in model as the website: log in, and the app shows the screens
+for your account's role. One Expo project, one install, role decided at login.
 
-## What's different from the web parent app
+The folder is still named `mobile-parent` for historical reasons (it started as a parent-only app
+to fix medication alarms); it now covers every role.
 
-- **Real OS-scheduled notifications** (`expo-notifications`) instead of polling +
-  Web Audio. The phone's own alarm/notification system fires the reminder — works
-  even if the app is fully closed or the phone is locked.
-- The backend (`backend/src/scheduler/medication.js`) is still the source of truth:
-  it still auto-escalates a missed dose to an alert on its own, independent of
-  whether the phone notification was seen. The native notification is the "ring the
-  bell" layer; the backend is the "did they actually respond" layer.
-- Login, SOS, and visit confirmation work the same as the web parent app, just in
-  native components.
-- Voice: text-to-speech via `expo-speech` announces the reminder. Voice *input*
-  (saying "yes" to confirm) isn't included in this version — tap-to-confirm only.
+## Why this exists alongside the website
+
+The website still works fine for everyone. This app exists because **medication alarms need to
+fire even when nothing is open in a browser** — that's an OS-level capability only a real native
+app has. Once we were building native anyway, "all roles, same as the website" was the natural
+next step. Functionally near-parity with the website; a few things are intentionally simplified
+(see "Known gaps" below).
+
+## What's in here, per role
+
+- **Parent**: real OS-scheduled medication alarms (fire even with the app closed/phone locked),
+  SOS, visit confirmation, voice announcements (`expo-speech`).
+- **Buyer**: dashboard (visits, vitals, alerts, care plan), visit detail with proof artifacts, SOS,
+  book a service + mock payment, billing/subscription, Care Manager chat.
+- **Care Manager**: alert queue, family roster, chat, recurring medication reminder setup, visit
+  scheduling.
+- **Caregiver**: visit list, check-in/out using **real device GPS** (`expo-location` — more
+  accurate than the website's simulated-coordinates version), **real camera capture**
+  (`expo-image-picker`) for proof photos, medication marking.
+- **Admin**: caregiver verification + city coverage, live SLA dashboard, audit log.
 
 ## Setup
 
@@ -26,64 +35,56 @@ cd mobile-parent
 npm install
 ```
 
-### 1. Point it at your backend
-
-Edit `src/config.js` — `API_BASE_URL` must be your PC's **LAN IP** (not
-`localhost`), because the phone is a separate device on the network:
-
-```js
-export const API_BASE_URL = 'http://192.168.18.10:4000/v1';
-```
-
-Find your current LAN IP with `ipconfig` (look for the Wi-Fi adapter's IPv4
-address) — it can change if your router reassigns it. The backend
-(`cd ../backend && npm run dev`) must be running on that machine, and your **phone
-must be on the same Wi-Fi network** as the PC.
-
-### 2. Run it
+Edit `src/config.js` — `API_BASE_URL` must be your PC's **LAN IP**, not `localhost` (the phone is a
+separate device on the network). Find it with `ipconfig` (Wi-Fi adapter's IPv4). The backend
+(`cd ../backend && npm run dev`) must be running, and your phone must be on the same Wi-Fi.
 
 ```
 npx expo start
 ```
 
-This prints a QR code. Install **Expo Go** from the Play Store / App Store on your
-phone, then scan the QR code (Android: in-app scanner; iPhone: use the Camera app).
-The app loads over your Wi-Fi — no cable, no app store submission needed for
-testing.
+Scan the QR code with **Expo Go** (Play Store / App Store). If you see "project is incompatible
+with this version of Expo Go" even on an up-to-date phone: npm's "latest" Expo SDK tag usually runs
+ahead of what's actually published in the App Store's Expo Go binary. This project is pinned to
+SDK 54 specifically because it's had time to propagate — if you still hit this, check
+`npm view expo dist-tags` for the newest SDK that's been out a while and `npx expo install expo@<version> && npx expo install --fix` to match it.
 
-### 3. Log in
+## Demo accounts (password123 for all)
 
-Use the parent demo account: `+919900000003` / `password123` (or any real parent
-account from the backend).
+| Role | Phone |
+|---|---|
+| Buyer (Anjali Rao) | +12065550100 |
+| Parent (Lakshmi Rao) | +919900000003 |
+| Care Manager (Ravi Kumar) | +919900000001 |
+| Caregiver (Ramesh Naik) | +919900000002 |
+| Admin (Priya Sharma) | +919900000099 |
 
-## Testing the alarm for real
+The login screen has tap-to-fill demo account cards, same as the website.
 
-1. As Care Manager (on the website), set up a medication schedule for a time 1–2
-   minutes from now.
-2. Open the parent app once so it syncs the schedule and calls
-   `Notifications.scheduleNotificationAsync` for it.
-3. **Close the app completely** (swipe it away, don't just background it).
-4. At the scheduled time, your phone should buzz/ring with a real system
-   notification — try this with the screen locked too.
-5. Tap the notification — it opens the app to the home screen, which shows the
-   medication as "due" with an **"I took it"** button.
-6. If you ignore it, the backend auto-marks it missed after the grace period, same
-   as the web version — check `GET /v1/parents/:id/medications` from the backend
-   or look at the Care Manager's alert queue.
+## Testing the medication alarm (the headline feature)
 
-## Known limitations (be upfront about these)
+1. Log in as **Care Manager**, set up a medication schedule for 1-2 minutes out.
+2. Log in as **Parent** on the same device (or a second device/Expo Go instance).
+3. **Fully close the app.**
+4. At the scheduled time, the phone rings/buzzes with a real system notification — works locked,
+   works closed.
+5. Tap it → app opens to the alarm card → "I took it".
+6. Ignore it instead, and the backend auto-marks it missed after the grace period on its own —
+   check the Care Manager's alert queue.
 
-- **Schedule changes don't sync in the background.** If the Care Manager adds or
-  pauses a reminder, the phone only picks it up the next time the parent opens the
-  app (which re-syncs and reschedules). There's no push-based instant sync — that
-  would need a real push service (FCM/APNs) wired through the backend, which is a
-  bigger lift than this pass covered.
-- **iOS notification reliability**: Apple is stricter about background behavior
-  than Android. Local *scheduled* notifications (what this app uses) are reliable
-  on both platforms since they're OS-scheduled, not app-triggered — but always
-  test on the actual device you intend to use day to day.
-- **Distribution**: this runs via Expo Go for development/testing. To put a real
-  installable app icon on your parent's phone without Expo Go, you'd build with
-  `eas build` (Expo's cloud build service — works for iOS without owning a Mac)
-  and either sideload it or publish through the App Store / Play Store, which
-  needs developer accounts on both platforms. Not done in this pass.
+## Known gaps vs. the website
+
+- **Buyer onboarding isn't in the mobile app.** Onboard a parent from the website first; the
+  mobile buyer dashboard reads that data fine once it exists.
+- **Visit scheduling is simplified** to "schedule for 1 hour from now" — no date/time picker
+  dependency was added to keep this build lean. Full date/time scheduling, same as the website,
+  would need `@react-native-community/datetimepicker`.
+- **Caregiver offline queue isn't ported.** The website's caregiver app queues check-in/out in
+  IndexedDB when offline; this native version doesn't have that yet (would need an AsyncStorage
+  queue + `@react-native-community/netinfo`).
+- **Schedule changes sync on app-open, not push.** Same limitation as the original parent-only
+  build — no FCM/APNs wiring yet, so a new/paused reminder is picked up next time the app is
+  opened, not instantly.
+- **No real distribution.** This runs via Expo Go for dev/testing. A real installable app icon
+  needs `eas build` (works for iOS without a Mac) plus, for app stores, developer accounts on both
+  platforms — not done here.

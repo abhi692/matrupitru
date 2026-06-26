@@ -1,0 +1,25 @@
+// Color tokens mirrored from frontend/src/index.css so the native app feels
+// like the same product as the website.
+export const colors = {
+  brand50: '#e1f5ee',
+  brand100: '#c3ebdd',
+  brand200: '#9adfc8',
+  brand500: '#1d9e75',
+  brand600: '#0f6e56',
+  brand700: '#0c5945',
+  cream100: '#f7f7f5',
+  warm50: '#fff8e6',
+  warm200: '#ffe6a3',
+  warm600: '#b06000',
+  rose50: '#fde8ea',
+  rose600: '#b00020',
+  rose700: '#8c0019',
+  stone100: '#f0efe9',
+  stone200: '#e7e5e4',
+  stone400: '#a8a29e',
+  stone500: '#78716c',
+  stone600: '#57534e',
+  stone700: '#44403c',
+  stone800: '#292524',
+  white: '#ffffff',
+};
