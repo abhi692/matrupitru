@@ -1,7 +1,21 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api, setToken, getToken } from '../api/client';
+import { getExpoPushToken } from '../lib/notifications';
 
 const AuthContext = createContext(null);
+
+// Best-effort: register the device's push token with the backend so SOS/alert/
+// reminder events can reach this device instantly. Never blocks login on failure
+// (no network, permission denied, Expo Go sandbox quirks) — push is a bonus
+// channel, not a requirement to use the app.
+async function registerPushToken() {
+  try {
+    const token = await getExpoPushToken();
+    if (token) await api.patch('/me/push-token', { pushToken: token });
+  } catch {
+    // best-effort
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -14,6 +28,7 @@ export function AuthProvider({ children }) {
       try {
         const me = await api.get('/me');
         setUser(me);
+        registerPushToken();
       } catch {
         await setToken(null);
       } finally {
@@ -26,6 +41,7 @@ export function AuthProvider({ children }) {
     const data = await api.post('/auth/login', { phone, password });
     await setToken(data.token);
     setUser(data.user);
+    registerPushToken();
     return data.user;
   }
 

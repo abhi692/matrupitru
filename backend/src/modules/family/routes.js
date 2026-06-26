@@ -105,7 +105,7 @@ familyRouter.get(
     });
     const parentIds = parents.map((p) => p.id);
 
-    const [upcomingVisits, recentVisits, vitals, alerts, carePlan] = await Promise.all([
+    const [upcomingVisits, recentVisits, vitals, alerts, carePlan, buyers] = await Promise.all([
       prisma.visit.findMany({
         where: { parentId: { in: parentIds }, status: { in: ['scheduled', 'enroute', 'in_progress'] } },
         orderBy: { scheduledAt: 'asc' },
@@ -127,9 +127,10 @@ familyRouter.get(
         orderBy: { triggeredAt: 'desc' },
       }),
       prisma.carePlan.findUnique({ where: { familyId } }),
+      prisma.user.findMany({ where: { familyId, role: 'buyer' } }),
     ]);
 
-    res.json(omitPasswordHash({ parents, carePlan, upcomingVisits, recentVisits, vitals, openAlerts: alerts }));
+    res.json(omitPasswordHash({ parents, carePlan, upcomingVisits, recentVisits, vitals, openAlerts: alerts, buyers }));
   }
 );
 
@@ -158,6 +159,142 @@ familyRouter.patch('/parents/:id', requireAuth, async (req, res) => {
   const parent = await prisma.parent.update({ where: { id: req.params.id }, data });
   res.json(parent);
 });
+
+// POST /v1/families/:id/invites — invite a sibling to share access to this
+// family instead of MatruPitru only supporting one buyer (§ PM review: Indian
+// families routinely have 2-3 adult children who all want visibility).
+familyRouter.post(
+  '/families/:id/invites',
+  requireAuth,
+  requireOwnFamily((req) => req.params.id),
+  async (req, res) => {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ error: 'phone required' });
+
+    const existing = await prisma.user.findUnique({ where: { phone } });
+    if (existing?.familyId === req.params.id) {
+      return res.status(400).json({ error: 'This person already has access to this family.' });
+    }
+
+    const invite = await prisma.familyInvite.create({
+      data: { familyId: req.params.id, phone, invitedBy: req.user.id },
+    });
+    res.status(201).json(invite);
+  }
+);
+
+// GET /v1/families/:id/invites — pending/accepted invites for this family
+familyRouter.get(
+  '/families/:id/invites',
+  requireAuth,
+  requireOwnFamily((req) => req.params.id),
+  async (req, res) => {
+    const invites = await prisma.familyInvite.findMany({
+      where: { familyId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(invites);
+  }
+);
+
+// GET /v1/invites/pending?phone= — used by the registration/login flow to
+// check if a phone number has a waiting family invite.
+familyRouter.get('/invites/pending', async (req, res) => {
+  const { phone } = req.query;
+  if (!phone) return res.status(400).json({ error: 'phone required' });
+  const invite = await prisma.familyInvite.findFirst({
+    where: { phone, status: 'pending' },
+    include: { family: { include: { users: true } } },
+  });
+  if (!invite) return res.json(null);
+  res.json({ id: invite.id, familyName: invite.family.users.find((u) => u.role === 'buyer')?.name });
+});
+
+// POST /v1/invites/:id/accept — the invited sibling accepts; links their
+// (already-authenticated) account to the family as a co-buyer.
+familyRouter.post('/invites/:id/accept', requireAuth, async (req, res) => {
+  const invite = await prisma.familyInvite.findUnique({ where: { id: req.params.id } });
+  if (!invite || invite.status !== 'pending') return res.status(404).json({ error: 'Invite not found or already used' });
+  if (invite.phone !== req.user.phone) return res.status(403).json({ error: 'This invite is for a different phone number' });
+
+  await prisma.user.update({ where: { id: req.user.id }, data: { familyId: invite.familyId, role: 'buyer' } });
+  await prisma.familyInvite.update({ where: { id: invite.id }, data: { status: 'accepted', acceptedAt: new Date() } });
+  res.json({ familyId: invite.familyId });
+});
+
+// GET /v1/families/:id/timeline — a single chronological narrative feed instead
+// of separate dashboard widgets (§ PM review: a buyer wants "what happened with
+// my parent" as a story, not six disconnected panels they have to mentally merge).
+familyRouter.get(
+  '/families/:id/timeline',
+  requireAuth,
+  requireOwnFamily((req) => req.params.id),
+  async (req, res) => {
+    const familyId = req.params.id;
+    const parents = await prisma.parent.findMany({ where: { familyId }, select: { id: true } });
+    const parentIds = parents.map((p) => p.id);
+
+    const [visits, vitals, alerts, medLogs, ratings] = await Promise.all([
+      prisma.visit.findMany({
+        where: { parentId: { in: parentIds }, status: 'completed' },
+        include: { caregiver: true },
+        orderBy: { checkOutAt: 'desc' },
+        take: 20,
+      }),
+      prisma.vitalsReading.findMany({
+        where: { parentId: { in: parentIds }, flagged: true },
+        orderBy: { recordedAt: 'desc' },
+        take: 20,
+      }),
+      prisma.alert.findMany({
+        where: { parentId: { in: parentIds } },
+        orderBy: { triggeredAt: 'desc' },
+        take: 20,
+      }),
+      prisma.medicationLog.findMany({
+        where: { parentId: { in: parentIds }, status: { in: ['given', 'missed'] } },
+        orderBy: { scheduledAt: 'desc' },
+        take: 20,
+      }),
+      prisma.rating.findMany({
+        where: { buyer: { familyId } },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+    ]);
+
+    const events = [
+      ...visits.map((v) => ({
+        id: `visit-${v.id}`, at: v.checkOutAt, type: 'visit',
+        summary: `${v.caregiver?.name || 'A caregiver'} completed a ${v.type} visit${v.geoVerified ? ' (geo-verified)' : ''}.`,
+        meta: { visitId: v.id },
+      })),
+      ...vitals.map((v) => ({
+        id: `vitals-${v.id}`, at: v.recordedAt, type: 'vitals_flagged',
+        summary: `Flagged ${v.type.toUpperCase()} reading: ${v.value} ${v.unit}.`,
+      })),
+      ...alerts.map((a) => ({
+        id: `alert-${a.id}`, at: a.triggeredAt, type: a.type,
+        summary: a.type === 'sos' ? 'Emergency SOS was raised.' : a.type === 'med_missed' ? 'A medication dose was missed.' : `Alert: ${a.type.replace(/_/g, ' ')}.`,
+        severity: a.severity,
+        meta: { acknowledged: !!a.acknowledgedAt },
+      })),
+      ...medLogs.map((m) => ({
+        id: `med-${m.id}`, at: m.scheduledAt, type: `medication_${m.status}`,
+        summary: m.status === 'given' ? `${m.medication} was taken on time.` : `${m.medication} dose was missed.`,
+      })),
+      ...ratings.map((r) => ({
+        id: `rating-${r.id}`, at: r.createdAt, type: 'rating',
+        summary: `Rated a caregiver ${r.stars}/5${r.comment ? `: "${r.comment}"` : '.'}`,
+      })),
+    ]
+      .filter((e) => e.at)
+      .sort((a, b) => new Date(b.at) - new Date(a.at))
+      .slice(0, 40);
+
+    res.json(events);
+  }
+);
 
 // GET /v1/parents/:id/schedule — upcoming visits
 familyRouter.get('/parents/:id/schedule', requireAuth, async (req, res) => {

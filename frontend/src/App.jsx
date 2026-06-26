@@ -11,6 +11,7 @@ import Sos from './pages/buyer/Sos';
 import Book from './pages/buyer/Book';
 import Billing from './pages/buyer/Billing';
 import Messages from './pages/buyer/Messages';
+import Timeline from './pages/buyer/Timeline';
 import Console from './pages/caremanager/Console';
 import FieldApp from './pages/caregiver/FieldApp';
 import ParentApp from './pages/parent/ParentApp';
@@ -39,6 +40,7 @@ export default function App() {
               <Route path="/buyer/book" element={<RequireRole role="buyer"><Book /></RequireRole>} />
               <Route path="/buyer/billing" element={<RequireRole role="buyer"><Billing /></RequireRole>} />
               <Route path="/buyer/messages" element={<RequireRole role="buyer"><Messages /></RequireRole>} />
+              <Route path="/buyer/timeline" element={<RequireRole role="buyer"><Timeline /></RequireRole>} />
 
               <Route path="/care_manager" element={<RequireRole role="care_manager"><Console /></RequireRole>} />
               <Route path="/caregiver" element={<RequireRole role="caregiver"><FieldApp /></RequireRole>} />

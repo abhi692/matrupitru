@@ -26,13 +26,14 @@ async function request(method, path, body, idempotencyKey) {
   return data;
 }
 
-async function upload(path, file, fieldName = 'file') {
+async function upload(path, file, fieldName = 'file', extraFields = {}) {
   const headers = {};
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const formData = new FormData();
   formData.append(fieldName, file);
+  for (const [key, value] of Object.entries(extraFields)) formData.append(key, value);
 
   const res = await fetch(`${BASE}${path}`, { method: 'POST', headers, body: formData });
   const data = await res.json().catch(() => ({}));

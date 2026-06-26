@@ -4,6 +4,8 @@ import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { Card, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import StripeCardField from '../../components/StripeCardField';
+import { openRazorpayCheckout } from '../../lib/checkout';
 import { cn } from '../../lib/utils';
 
 const ICONS = {
@@ -21,6 +23,7 @@ export default function Book() {
   const [parentId, setParentId] = useState(null);
   const [selected, setSelected] = useState('');
   const [status, setStatus] = useState(null);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
 
   useEffect(() => {
     api.get('/catalog/services').then(setCatalog);
@@ -31,6 +34,7 @@ export default function Book() {
 
   async function book() {
     setStatus(null);
+    setPendingCheckout(null);
     const service = catalog.find((s) => s.id === selected);
     if (!service) return;
     try {
@@ -46,9 +50,48 @@ export default function Book() {
         type: 'one_time',
         bookingId: booking.id,
       }, crypto.randomUUID());
-      setStatus({ ok: true, message: `Booked ${service.name} for ${service.currency} ${service.price}. Payment ${payment.status}.` });
+
+      if (payment.status === 'succeeded') {
+        setStatus({ ok: true, message: `Booked ${service.name} for ${service.currency} ${service.price}. Payment succeeded.` });
+        return;
+      }
+
+      if (payment.provider === 'razorpay') {
+        try {
+          const { razorpayPaymentId, razorpaySignature } = await openRazorpayCheckout({
+            keyId: payment.razorpayKeyId,
+            orderId: payment.razorpayOrderId,
+            amount: service.price,
+            currency: service.currency,
+            description: service.name,
+          });
+          await api.post(`/payments/${payment.id}/verify`, { razorpayPaymentId, razorpaySignature, bookingId: booking.id });
+          setStatus({ ok: true, message: `Booked ${service.name} — payment confirmed via Razorpay.` });
+        } catch (err) {
+          setStatus({ ok: false, message: err.message });
+        }
+        return;
+      }
+
+      if (payment.provider === 'stripe') {
+        setPendingCheckout({ payment, booking, service });
+        return;
+      }
+
+      setStatus({ ok: true, message: `Booked ${service.name}. Payment ${payment.status}.` });
     } catch (err) {
       setStatus({ ok: false, message: err.message });
+    }
+  }
+
+  async function onStripeSuccess() {
+    try {
+      await api.post(`/payments/${pendingCheckout.payment.id}/verify`, { bookingId: pendingCheckout.booking.id });
+      setStatus({ ok: true, message: `Booked ${pendingCheckout.service.name} — payment confirmed via Stripe.` });
+    } catch (err) {
+      setStatus({ ok: false, message: err.message });
+    } finally {
+      setPendingCheckout(null);
     }
   }
 
@@ -83,11 +126,26 @@ export default function Book() {
       <Card>
         <CardTitle>Confirm booking</CardTitle>
         <CardDescription className="mb-4">
-          International cards (Stripe) / UPI &amp; netbanking (Razorpay) integration is mocked for Phase 1.
+          INR pays via Razorpay (UPI/netbanking), other currencies via Stripe — test-mode keys, real gateway calls.
         </CardDescription>
-        <Button onClick={book} disabled={!selected} size="lg" className="w-full">
-          Book &amp; pay (mock)
-        </Button>
+        {!pendingCheckout && (
+          <Button onClick={book} disabled={!selected} size="lg" className="w-full">
+            Book &amp; pay
+          </Button>
+        )}
+
+        {pendingCheckout && (
+          <div className="space-y-3">
+            <p className="text-sm text-stone-600">
+              {pendingCheckout.service.currency} {pendingCheckout.service.price} for {pendingCheckout.service.name}
+            </p>
+            <StripeCardField
+              clientSecret={pendingCheckout.payment.stripeClientSecret}
+              onSuccess={onStripeSuccess}
+              onError={(msg) => setStatus({ ok: false, message: msg })}
+            />
+          </div>
+        )}
 
         {status && (
           <div

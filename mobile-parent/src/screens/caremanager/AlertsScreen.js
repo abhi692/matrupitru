@@ -47,6 +47,7 @@ export default function AlertsScreen() {
             <View style={s.alertRow}>
               <View style={{ flex: 1 }}>
                 <Badge variant={a.severity === 'emergency' ? 'danger' : 'warning'}>{a.severity}</Badge>
+                {a.escalationLevel > 0 && <Badge variant="danger">Escalated x{a.escalationLevel}</Badge>}
                 <Text style={s.alertType}>{a.type.replace(/_/g, ' ')}</Text>
                 <Text style={s.alertTime}>{new Date(a.triggeredAt).toLocaleString()}</Text>
               </View>

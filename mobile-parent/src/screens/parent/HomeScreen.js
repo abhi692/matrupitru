@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, AppState } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, AppState, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { api } from '../../api/client';
@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const [sosStatus, setSosStatus] = useState('');
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [activeCall, setActiveCall] = useState(null);
 
   const refresh = useCallback(async () => {
     if (!user?.familyId) return;
@@ -44,9 +45,23 @@ export default function HomeScreen() {
   }, [refresh]);
 
   useEffect(() => {
+    if (!user?.familyId) return;
+    function pollVideoCall() {
+      api.get(`/families/${user.familyId}/video-sessions`).then((sessions) => {
+        const live = sessions.find((s) => !s.expiresAt || new Date(s.expiresAt) > new Date());
+        setActiveCall(live || null);
+      }).catch(() => {});
+    }
+    pollVideoCall();
+    const interval = setInterval(pollVideoCall, 8000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
     if (dueMeds.length === 0) return;
     const med = dueMeds[0];
-    Speech.speak(`Time for your medicine: ${med.medication}`, { language: user?.locale === 'kn' ? 'kn-IN' : user?.locale === 'hi' ? 'hi-IN' : 'en-US' });
+    const SPEECH_LOCALE = { hi: 'hi-IN', kn: 'kn-IN', ta: 'ta-IN', te: 'te-IN', bn: 'bn-IN', mr: 'mr-IN' };
+    Speech.speak(`Time for your medicine: ${med.medication}`, { language: SPEECH_LOCALE[user?.locale] || 'en-US' });
   }, [dueMeds]);
 
   async function onRefresh() {
@@ -102,6 +117,13 @@ export default function HomeScreen() {
 
       {error ? <Text style={styles.errorBox}>{error}</Text> : null}
 
+      {activeCall && (
+        <TouchableOpacity style={styles.callButton} onPress={() => Linking.openURL(activeCall.roomUrl)} activeOpacity={0.85}>
+          <Ionicons name="videocam" size={22} color="#fff" />
+          <Text style={styles.callButtonText}>Join video call</Text>
+        </TouchableOpacity>
+      )}
+
       {dueMeds.map((med) => (
         <View key={med.id} style={styles.alarmCard}>
           <View style={styles.alarmHead}>
@@ -153,6 +175,8 @@ const styles = StyleSheet.create({
   alarmMed: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 16 },
   takeButton: { backgroundColor: colors.accent, borderRadius: radius.control, paddingVertical: 16, alignItems: 'center' },
   takeButtonText: { color: '#fff', fontWeight: '700', fontSize: 17 },
+  callButton: { flexDirection: 'row', gap: 10, backgroundColor: colors.accent, borderRadius: radius.card, paddingVertical: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 16, ...shadow },
+  callButtonText: { color: '#fff', fontWeight: '700', fontSize: 17 },
   sosButton: { flexDirection: 'row', gap: 10, backgroundColor: colors.danger, borderRadius: radius.card, paddingVertical: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 14, ...shadow },
   sosButtonText: { color: '#fff', fontWeight: '700', fontSize: 19 },
   sosStatus: { backgroundColor: colors.successSoft, color: colors.accentDark, padding: 14, borderRadius: radius.control, marginBottom: 16, fontSize: 15 },

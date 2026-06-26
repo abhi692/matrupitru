@@ -1,6 +1,8 @@
 import { prisma } from '../lib/db.js';
 import { bus } from '../events/bus.js';
 import { notifyAll } from '../lib/notify.js';
+import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 
 // The automation engine behind medication reminders. Nobody schedules a dose
 // manually day-to-day: a buyer/Care Manager sets up a MedicationSchedule once
@@ -87,7 +89,8 @@ async function tick() {
     await fireDueAlarms();
     await autoMissUnacknowledged();
   } catch (err) {
-    console.error('[medication scheduler] tick failed:', err);
+    logger.error({ err }, 'medication scheduler tick failed');
+    captureException(err);
   }
 }
 

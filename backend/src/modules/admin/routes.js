@@ -2,8 +2,24 @@ import { Router } from 'express';
 import { prisma } from '../../lib/db.js';
 import { requireAuth, requireRole } from '../../lib/auth.js';
 import { omitPasswordHash } from '../../lib/sanitize.js';
+import { razorpayEnabled, stripeEnabled } from '../../lib/payments.js';
+import { videoEnabled } from '../../lib/video.js';
+import { whatsappEnabled } from '../../lib/whatsapp.js';
 
 export const adminRouter = Router();
+
+// GET /v1/admin/integrations — which optional third-party gateways are live vs.
+// mocked, at a glance, instead of an ops person having to check env vars by hand.
+adminRouter.get('/admin/integrations', requireAuth, requireRole('admin'), (req, res) => {
+  res.json({
+    razorpay: razorpayEnabled,
+    stripe: stripeEnabled,
+    video: videoEnabled,
+    whatsapp: whatsappEnabled,
+    ai: Boolean(process.env.ANTHROPIC_API_KEY),
+    sentry: Boolean(process.env.SENTRY_DSN),
+  });
+});
 
 // GET /v1/admin/caregivers — full roster incl. pending verification, for ops review
 adminRouter.get('/admin/caregivers', requireAuth, requireRole('admin'), async (req, res) => {

@@ -109,6 +109,9 @@ export default function Console() {
                   <Badge variant={SEVERITY_VARIANT[a.severity] || 'neutral'} className="capitalize">{a.severity}</Badge>
                   <span className="font-medium text-stone-700 capitalize">{a.type.replace(/_/g, ' ')}</span>
                   <span className="text-stone-400 text-xs">{new Date(a.triggeredAt).toLocaleString()}</span>
+                  {a.escalationLevel > 0 && (
+                    <Badge variant="danger">Escalated x{a.escalationLevel}</Badge>
+                  )}
                 </div>
                 <Button size="sm" variant="subtle" onClick={() => acknowledge(a.id)}>Acknowledge</Button>
               </li>

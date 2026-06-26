@@ -26,8 +26,10 @@ of a dense form-and-list dump.
 ## What's in here, per role
 
 - **Parent** (single screen, no tabs needed): real OS-scheduled medication alarms (fire even with
-  the app closed/phone locked), SOS, visit confirmation, voice announcements (`expo-speech`).
-- **Buyer** — tabs: *Home* (dashboard → visit detail), *Book*, *Billing*, *Chat*, *SOS*.
+  the app closed/phone locked), SOS, visit confirmation, voice announcements (`expo-speech`), and a
+  "Join video call" banner that appears automatically when the buyer starts a Daily.co video session.
+- **Buyer** — tabs: *Home* (dashboard → visit detail → care timeline, start video call), *Book*,
+  *Billing*, *Chat*, *SOS*.
 - **Care Manager** — tabs: *Alerts*, *Families*, *Schedule* (medication reminders + visits),
   *Chat*.
 - **Caregiver** — tabs: *Today* (active visits — check-in/out with **real device GPS** via
@@ -35,6 +37,10 @@ of a dense form-and-list dump.
   marking), *History* (completed visits).
 - **Admin** — tabs: *Overview* (SLA dashboard), *Caregivers* (verification + city coverage),
   *Audit* (event log).
+
+All roles register a real Expo push token with the backend on login (`PATCH /v1/me/push-token`) —
+SOS, alerts, and medication reminders can reach the device via a real push, not just on next
+app-open poll.
 
 ## Setup
 

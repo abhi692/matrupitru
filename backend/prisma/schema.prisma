@@ -24,6 +24,22 @@ model Family {
   payments       Payment[]
   subscriptions  Subscription[]
   threads        Thread[]
+  invites        FamilyInvite[]
+}
+
+// Lets a sibling join an existing family as a second (or third) buyer instead
+// of MatruPitru only supporting one buyer per family — the single-buyer
+// assumption didn't match how Indian families with multiple adult children
+// actually share care responsibility.
+model FamilyInvite {
+  id          String   @id @default(uuid())
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  phone       String
+  invitedBy   String
+  status      String   @default("pending") // pending | accepted | expired
+  createdAt   DateTime @default(now())
+  acceptedAt  DateTime?
 }
 
 model User {
@@ -40,6 +56,11 @@ model User {
   familyId     String?
   family       Family?  @relation(fields: [familyId], references: [id])
 
+  // A device push token for real instant alerts (Expo Push service — works
+  // without a separate Firebase/Apple developer account). One per user is
+  // enough for Phase 1; a real multi-device app would need a join table.
+  pushToken    String?
+
   parentProfile  Parent?    @relation("UserParentProfile")
   caregiverProfile Caregiver? @relation("UserCaregiverProfile")
 
@@ -48,6 +69,7 @@ model User {
   visitsScheduled  Visit[]    @relation("ScheduledByUser")
   alertsAcknowledged Alert[]  @relation("AlertAcknowledgedBy")
   messages         Message[]
+  ratingsGiven     Rating[]   @relation("RatingByBuyer")
 }
 
 model Parent {
@@ -222,6 +244,12 @@ model Alert {
   acknowledgedBy User?    @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
   acknowledgedAt DateTime?
   resolution     String?
+
+  // Escalation tree (§6.2 had no fallback layer — this is that fallback).
+  // escalationLevel 0 = just buyer+CM notified; each unacknowledged tick of
+  // the scheduler bumps this and notifies the next emergency contact in line.
+  escalationLevel Int     @default(0)
+  lastEscalatedAt DateTime?
 }
 
 model Payment {
@@ -232,10 +260,27 @@ model Payment {
   currency    String
   method      String
   gatewayRef  String?
+  provider    String?  // razorpay | stripe — null means still-mocked
+  providerOrderId String?
+  providerPaymentId String?
   type        String   // subscription | one_time
-  status      String   @default("succeeded")
+  status      String   @default("succeeded") // succeeded | pending | failed
   idempotencyKey String? @unique
   createdAt   DateTime @default(now())
+}
+
+// A Daily.co video room, created on demand for a "see your parent" check-in
+// rather than just a text/photo proof of care — the highest-emotional-ROI
+// gap identified for an elder-care product aimed at remote adult children.
+model VideoSession {
+  id         String   @id @default(uuid())
+  familyId   String
+  visitId    String?
+  roomName   String
+  roomUrl    String
+  createdBy  String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime?
 }
 
 model Subscription {
@@ -258,8 +303,42 @@ model Caregiver {
   skillsJson         String   @default("[]")
   serviceCitiesJson  String   @default("[]")
   rating             Float    @default(0)
+  ratingCount        Int      @default(0)
   backgroundCheckRef String?
   availability       String   @default("available")
+
+  documents          CaregiverDocument[]
+  ratings            Rating[]
+}
+
+// Real verification pipeline instead of an admin just flipping a status flag —
+// police verification / ID proof / reference letters get uploaded and
+// individually reviewed, the way the trust signal actually works in India.
+model CaregiverDocument {
+  id           String   @id @default(uuid())
+  caregiverId  String
+  caregiver    Caregiver @relation(fields: [caregiverId], references: [id])
+  type         String   // police_verification | id_proof | reference_letter | training_certificate
+  fileUrl      String
+  status       String   @default("pending") // pending | approved | rejected
+  uploadedAt   DateTime @default(now())
+  reviewedById String?
+  reviewedAt   DateTime?
+  notes        String?
+}
+
+// Buyer rates a caregiver after a completed visit. Feeds the caregiver's
+// aggregate rating shown to Care Managers when assigning future visits.
+model Rating {
+  id          String   @id @default(uuid())
+  visitId     String   @unique
+  caregiverId String
+  caregiver   Caregiver @relation(fields: [caregiverId], references: [id])
+  buyerId     String
+  buyer       User     @relation("RatingByBuyer", fields: [buyerId], references: [id])
+  stars       Int
+  comment     String?
+  createdAt   DateTime @default(now())
 }
 
 model Thread {

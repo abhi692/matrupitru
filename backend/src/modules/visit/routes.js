@@ -180,6 +180,41 @@ visitRouter.post('/visits/:id/confirm', requireAuth, requireRole('parent', 'admi
   res.json(visit);
 });
 
+// POST /v1/visits/:id/rating — buyer rates the caregiver after a completed visit.
+// Feeds the caregiver's aggregate rating shown to Care Managers when assigning
+// future visits — the trust loop extended past "did they show up" to "were they good."
+visitRouter.post('/visits/:id/rating', requireAuth, requireRole('buyer', 'admin'), async (req, res) => {
+  const { stars, comment } = req.body;
+  if (!stars || stars < 1 || stars > 5) return res.status(400).json({ error: 'stars must be 1-5' });
+
+  const visit = await prisma.visit.findUnique({ where: { id: req.params.id } });
+  if (!visit) return res.status(404).json({ error: 'Visit not found' });
+  if (visit.status !== 'completed') return res.status(400).json({ error: 'Can only rate completed visits' });
+  if (!visit.caregiverId) return res.status(400).json({ error: 'Visit has no assigned caregiver' });
+
+  const caregiver = await prisma.caregiver.findUnique({ where: { userId: visit.caregiverId } });
+  if (!caregiver) return res.status(404).json({ error: 'Caregiver profile not found' });
+
+  const rating = await prisma.rating.create({
+    data: { visitId: visit.id, caregiverId: caregiver.id, buyerId: req.user.id, stars, comment },
+  });
+
+  const newCount = caregiver.ratingCount + 1;
+  const newAvg = (caregiver.rating * caregiver.ratingCount + stars) / newCount;
+  await prisma.caregiver.update({
+    where: { id: caregiver.id },
+    data: { rating: newAvg, ratingCount: newCount },
+  });
+
+  res.status(201).json(rating);
+});
+
+// GET /v1/visits/:id/rating — buyer checks whether they've already rated this visit
+visitRouter.get('/visits/:id/rating', requireAuth, async (req, res) => {
+  const rating = await prisma.rating.findUnique({ where: { visitId: req.params.id } });
+  res.json(rating);
+});
+
 // GET /v1/visits/:id — buyer views completed visit + proof
 visitRouter.get('/visits/:id', requireAuth, async (req, res) => {
   const visit = await prisma.visit.findUnique({

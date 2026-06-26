@@ -35,7 +35,9 @@ export default function Billing() {
       <Card>
         <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-brand-500" /> Billing &amp; subscription</CardTitle>
         <CardDescription className="mb-5">
-          International cards (Stripe) / UPI &amp; netbanking (Razorpay) integration is mocked for Phase 1.
+          Recurring subscriptions are mocked for Phase 1 (no gateway has a stable test-mode
+          recurring-mandate flow worth wiring up yet); one-time service payments on the
+          <span className="font-medium"> Book a service</span> page use real Razorpay/Stripe test-mode checkout.
         </CardDescription>
         <Label>Monthly amount (USD)</Label>
         <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />

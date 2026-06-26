@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,7 @@ export default function DashboardScreen({ navigation }) {
   const [meds, setMeds] = useState([]);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [videoStatus, setVideoStatus] = useState('');
 
   const load = useCallback(async () => {
     if (!user?.familyId) return;
@@ -31,6 +32,16 @@ export default function DashboardScreen({ navigation }) {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  }
+
+  async function startVideoCall() {
+    setVideoStatus('');
+    try {
+      const session = await api.post(`/families/${user.familyId}/video-sessions`, {});
+      Linking.openURL(session.roomUrl);
+    } catch (err) {
+      setVideoStatus(err.message);
+    }
   }
 
   if (!user?.familyId) {
@@ -60,6 +71,18 @@ export default function DashboardScreen({ navigation }) {
         </View>
         <TouchableOpacity onPress={logout}><Text style={s.logout}>Log out</Text></TouchableOpacity>
       </View>
+
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <TouchableOpacity style={[s.callButton, { flex: 1 }]} onPress={() => navigation.navigate('Timeline')} activeOpacity={0.85}>
+          <Ionicons name="time-outline" size={18} color={colors.accent} />
+          <Text style={s.callButtonText}>Timeline</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.callButton, { flex: 1 }]} onPress={startVideoCall} activeOpacity={0.85}>
+          <Ionicons name="videocam-outline" size={18} color={colors.accent} />
+          <Text style={s.callButtonText}>Video call</Text>
+        </TouchableOpacity>
+      </View>
+      {videoStatus ? <Text style={s.muted}>{videoStatus}</Text> : null}
 
       {data.openAlerts.length > 0 && (
         <Card style={{ backgroundColor: colors.warningSoft }}>
@@ -123,6 +146,8 @@ const s = StyleSheet.create({
   parentName: { fontSize: 24, fontWeight: '800', color: colors.textPrimary },
   addrRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   logout: { color: colors.textTertiary, fontSize: 13 },
+  callButton: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt, borderRadius: 12, paddingVertical: 12, marginBottom: 14 },
+  callButtonText: { color: colors.accent, fontWeight: '700', fontSize: 14 },
   muted: { color: colors.textTertiary, fontSize: 13 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.separator },
   rowText: { fontSize: 14, color: colors.textPrimary, textTransform: 'capitalize' },

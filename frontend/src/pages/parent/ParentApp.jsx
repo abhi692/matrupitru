@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Siren, HeartHandshake, Volume2, Mic, Pill, BellRing } from 'lucide-react';
+import { Siren, HeartHandshake, Volume2, Mic, Pill, BellRing, Video } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { useI18n } from '../../i18n/I18nContext';
@@ -9,6 +9,10 @@ const YES_WORDS = {
   en: ['yes', 'yeah', 'confirm', 'took', 'done'],
   hi: ['हाँ', 'हां', 'जी', 'ले लिया'],
   kn: ['ಹೌದು', 'ತೆಗೆದುಕೊಂಡೆ'],
+  ta: ['ஆம்', 'எடுத்துக்கொண்டேன்'],
+  te: ['అవును', 'తీసుకున్నాను'],
+  bn: ['হ্যাঁ', 'নিয়েছি'],
+  mr: ['होय', 'घेतले'],
 };
 
 // Dignified, low-friction parent UX: large text, minimal choices, one-tap SOS,
@@ -26,6 +30,7 @@ export default function ParentApp() {
   const [parent, setParent] = useState(null);
   const [visits, setVisits] = useState([]);
   const [dueMeds, setDueMeds] = useState([]);
+  const [activeCall, setActiveCall] = useState(null);
   const [sosStatus, setSosStatus] = useState('');
   const [error, setError] = useState('');
   const [listening, setListening] = useState(false);
@@ -56,6 +61,20 @@ export default function ParentApp() {
     const interval = setInterval(() => pollMedications(parent.id), 10000);
     return () => clearInterval(interval);
   }, [parent]);
+
+  function pollVideoCall() {
+    if (!user?.familyId) return;
+    api.get(`/families/${user.familyId}/video-sessions`).then((sessions) => {
+      const live = sessions.find((s) => !s.expiresAt || new Date(s.expiresAt) > new Date());
+      setActiveCall(live || null);
+    }).catch(() => {});
+  }
+
+  useEffect(() => {
+    pollVideoCall();
+    const interval = setInterval(pollVideoCall, 8000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Ring + announce whenever there's an unacknowledged due medication.
   useEffect(() => {
@@ -189,6 +208,17 @@ export default function ParentApp() {
       </div>
 
       {error && <p className="text-base text-rose-600 bg-rose-50 rounded-card px-4 py-3">{error}</p>}
+
+      {activeCall && (
+        <a
+          href={activeCall.roomUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-3 rounded-card bg-brand-600 hover:bg-brand-700 text-white text-xl font-bold py-6 shadow-soft-lg transition-colors animate-pulse"
+        >
+          <Video className="h-7 w-7" /> Join video call
+        </a>
+      )}
 
       {dueMeds.map((med) => (
         <div key={med.id} className="rounded-card bg-warm-50 border-2 border-warm-200 p-5 animate-pulse">

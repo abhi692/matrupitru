@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, ShieldX, ShieldQuestion, Activity, MapPinned, ScrollText } from 'lucide-react';
+import { ShieldCheck, ShieldX, ShieldQuestion, Activity, MapPinned, ScrollText, Plug, FileText } from 'lucide-react';
 import { api } from '../../api/client';
 import { Card, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -12,6 +12,8 @@ export default function AdminConsole() {
   const [caregivers, setCaregivers] = useState([]);
   const [sla, setSla] = useState(null);
   const [audit, setAudit] = useState([]);
+  const [integrations, setIntegrations] = useState(null);
+  const [pendingDocs, setPendingDocs] = useState([]);
   const [cityDraft, setCityDraft] = useState({});
   const [error, setError] = useState('');
 
@@ -19,6 +21,13 @@ export default function AdminConsole() {
     api.get('/admin/caregivers').then(setCaregivers).catch((e) => setError(e.message));
     api.get('/admin/sla').then(setSla).catch((e) => setError(e.message));
     api.get('/admin/audit').then(setAudit).catch((e) => setError(e.message));
+    api.get('/admin/integrations').then(setIntegrations).catch((e) => setError(e.message));
+    api.get('/admin/documents?status=pending').then(setPendingDocs).catch((e) => setError(e.message));
+  }
+
+  async function reviewDocument(id, status) {
+    await api.patch(`/admin/documents/${id}/review`, { status });
+    refresh();
   }
 
   useEffect(refresh, []);
@@ -50,6 +59,48 @@ export default function AdminConsole() {
             <Metric label="Families" value={sla.totalFamilies} />
             <Metric label="Active parents (30d)" value={sla.activeParents30d} />
           </div>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle className="flex items-center gap-2"><Plug className="h-5 w-5 text-brand-500" /> Third-party integrations</CardTitle>
+        <CardDescription className="mb-4">Live (real API calls, test-mode keys) vs. mocked, at a glance.</CardDescription>
+        {integrations && (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries({
+              Razorpay: integrations.razorpay,
+              Stripe: integrations.stripe,
+              'Video (Daily.co)': integrations.video,
+              WhatsApp: integrations.whatsapp,
+              'AI digest': integrations.ai,
+              Sentry: integrations.sentry,
+            }).map(([name, live]) => (
+              <Badge key={name} variant={live ? 'success' : 'neutral'}>{name}: {live ? 'Live' : 'Mocked'}</Badge>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-brand-500" /> Pending document review</CardTitle>
+        {pendingDocs.length === 0 ? (
+          <p className="text-stone-400 text-sm mt-2">No documents waiting for review.</p>
+        ) : (
+          <ul className="space-y-2 mt-3">
+            {pendingDocs.map((d) => (
+              <li key={d.id} className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5">
+                <div>
+                  <span className="font-medium text-stone-700">{d.caregiver.user.name}</span>
+                  <span className="text-stone-400 text-xs ml-2 capitalize">{d.type.replace(/_/g, ' ')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 text-xs underline">View</a>
+                  <Button size="sm" variant="subtle" onClick={() => reviewDocument(d.id, 'approved')}><ShieldCheck className="h-3.5 w-3.5" /> Approve</Button>
+                  <Button size="sm" variant="outline" onClick={() => reviewDocument(d.id, 'rejected')}><ShieldX className="h-3.5 w-3.5" /> Reject</Button>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
 

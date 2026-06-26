@@ -9,10 +9,23 @@ export default function VisitDetail() {
   const { id } = useParams();
   const [visit, setVisit] = useState(null);
   const [error, setError] = useState('');
+  const [rating, setRating] = useState(null);
+  const [hoverStar, setHoverStar] = useState(0);
+  const [comment, setComment] = useState('');
 
   useEffect(() => {
     api.get(`/visits/${id}`).then(setVisit).catch((e) => setError(e.message));
+    api.get(`/visits/${id}/rating`).then(setRating).catch(() => {});
   }, [id]);
+
+  async function submitRating(stars) {
+    try {
+      const result = await api.post(`/visits/${id}/rating`, { stars, comment });
+      setRating(result);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   if (error) return <p className="text-rose-600 bg-rose-50 rounded-control px-4 py-3">{error}</p>;
   if (!visit) return <p className="text-stone-400 text-center py-12">Loading visit...</p>;
@@ -106,6 +119,43 @@ export default function VisitDetail() {
         </div>
 
         {visit.notes && <p className="mt-4 text-sm text-stone-500 italic">Notes: {visit.notes}</p>}
+
+        {visit.status === 'completed' && visit.caregiverId && (
+          <div className="mt-6 border-t border-stone-100 pt-4">
+            <h3 className="text-sm font-semibold text-stone-700 mb-2">Rate this caregiver</h3>
+            {rating ? (
+              <div className="flex items-center gap-1 text-warm-600">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star key={n} className={`h-5 w-5 ${n <= rating.stars ? 'fill-current' : ''}`} />
+                ))}
+                <span className="text-stone-400 text-sm ml-2">Thanks for your feedback{rating.comment ? `: "${rating.comment}"` : ''}</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      onMouseEnter={() => setHoverStar(n)}
+                      onMouseLeave={() => setHoverStar(0)}
+                      onClick={() => submitRating(n)}
+                      className="text-warm-500"
+                    >
+                      <Star className={`h-7 w-7 ${n <= hoverStar ? 'fill-current' : ''}`} />
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Optional comment"
+                  className="w-full rounded-control border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </Card>
     </div>
   );

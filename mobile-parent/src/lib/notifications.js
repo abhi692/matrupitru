@@ -70,3 +70,19 @@ export async function scheduleAllReminders(schedules) {
 export function addNotificationResponseListener(callback) {
   return Notifications.addNotificationResponseReceivedListener(callback);
 }
+
+// Gets a real Expo push token for this device so the backend can send instant
+// pushes (SOS, alerts, medication reminders) instead of the user only finding
+// out next time they open the app. Distinct from the local scheduled-notification
+// permission above — this needs project config (works in a dev/EAS build; in
+// Expo Go it resolves to a token scoped to Expo's own push sandbox project).
+export async function getExpoPushToken() {
+  const granted = await ensureNotificationPermissions();
+  if (!granted) return null;
+  try {
+    const { data } = await Notifications.getExpoPushTokenAsync();
+    return data;
+  } catch {
+    return null;
+  }
+}

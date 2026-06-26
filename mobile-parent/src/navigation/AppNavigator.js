@@ -9,6 +9,7 @@ import HomeScreen from '../screens/parent/HomeScreen';
 
 import DashboardScreen from '../screens/buyer/DashboardScreen';
 import VisitDetailScreen from '../screens/buyer/VisitDetailScreen';
+import TimelineScreen from '../screens/buyer/TimelineScreen';
 import SosScreen from '../screens/buyer/SosScreen';
 import BookScreen from '../screens/buyer/BookScreen';
 import BillingScreen from '../screens/buyer/BillingScreen';
@@ -46,6 +47,7 @@ function DashboardStack() {
     <Stack.Navigator>
       <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ title: 'Visit', headerBackTitle: 'Back' }} />
+      <Stack.Screen name="Timeline" component={TimelineScreen} options={{ title: 'Care timeline', headerBackTitle: 'Back' }} />
     </Stack.Navigator>
   );
 }

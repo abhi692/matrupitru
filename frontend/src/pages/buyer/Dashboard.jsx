@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { MapPin, ShieldAlert, CheckCircle2, AlertTriangle, CalendarClock, Activity, CreditCard, Stethoscope, Pill, Sparkles, Loader2 } from 'lucide-react';
+import { MapPin, ShieldAlert, CheckCircle2, AlertTriangle, CalendarClock, Activity, CreditCard, Stethoscope, Pill, Sparkles, Loader2, Users, UserPlus, Video, History } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -17,6 +17,28 @@ export default function Dashboard() {
   const [digest, setDigest] = useState(null);
   const [digestError, setDigestError] = useState('');
   const [digestLoading, setDigestLoading] = useState(false);
+  const [invitePhone, setInvitePhone] = useState('');
+  const [inviteStatus, setInviteStatus] = useState('');
+  const [invites, setInvites] = useState([]);
+  const [videoStatus, setVideoStatus] = useState('');
+  const [videoLoading, setVideoLoading] = useState(false);
+
+  async function startVideoCall() {
+    setVideoStatus('');
+    setVideoLoading(true);
+    try {
+      const session = await api.post(`/families/${user.familyId}/video-sessions`, {});
+      window.open(session.roomUrl, '_blank', 'noopener');
+    } catch (err) {
+      setVideoStatus(err.message);
+    } finally {
+      setVideoLoading(false);
+    }
+  }
+
+  function loadInvites() {
+    if (user?.familyId) api.get(`/families/${user.familyId}/invites`).then(setInvites).catch(() => {});
+  }
 
   useEffect(() => {
     if (!user?.familyId) return;
@@ -28,7 +50,21 @@ export default function Dashboard() {
         if (parentId) api.get(`/parents/${parentId}/medications`).then(setMeds);
       })
       .catch((err) => setError(err.message));
+    loadInvites();
   }, [user]);
+
+  async function sendInvite(e) {
+    e.preventDefault();
+    setInviteStatus('');
+    try {
+      await api.post(`/families/${user.familyId}/invites`, { phone: invitePhone });
+      setInviteStatus(`Invite sent to ${invitePhone}. They'll join automatically when they register or log in.`);
+      setInvitePhone('');
+      loadInvites();
+    } catch (err) {
+      setInviteStatus(err.message);
+    }
+  }
 
   if (!user?.familyId) return <Navigate to="/buyer/onboarding" replace />;
   if (error) return <p className="text-rose-600 bg-rose-50 rounded-control px-4 py-3">{error}</p>;
@@ -61,12 +97,21 @@ export default function Dashboard() {
             </p>
           )}
         </div>
-        <Link to="/buyer/sos">
-          <Button variant="emergency">
-            <ShieldAlert className="h-4 w-4" /> View / raise SOS
+        <div className="flex gap-2">
+          <Link to="/buyer/timeline">
+            <Button variant="outline"><History className="h-4 w-4" /> Timeline</Button>
+          </Link>
+          <Button variant="subtle" onClick={startVideoCall} disabled={videoLoading}>
+            {videoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />} Video call
           </Button>
-        </Link>
+          <Link to="/buyer/sos">
+            <Button variant="emergency">
+              <ShieldAlert className="h-4 w-4" /> View / raise SOS
+            </Button>
+          </Link>
+        </div>
       </div>
+      {videoStatus && <p className="text-sm text-stone-500">{videoStatus}</p>}
 
       {data.openAlerts.length > 0 && (
         <Card className="border-warm-200 bg-warm-50/40">
@@ -222,6 +267,43 @@ export default function Dashboard() {
           </ul>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-brand-500" /> Family sharing</CardTitle>
+        </CardHeader>
+        <p className="text-sm text-stone-500 mb-3">
+          Invite a sibling so they see the same dashboard, alerts and visit history — no need to relay updates manually.
+        </p>
+        {data.buyers?.length > 0 && (
+          <ul className="flex flex-wrap gap-2 mb-3">
+            {data.buyers.map((b) => (
+              <li key={b.id}>
+                <Badge variant="neutral">{b.name}{b.id === user.id ? ' (you)' : ''}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+        {invites.filter((i) => i.status === 'pending').length > 0 && (
+          <ul className="flex flex-wrap gap-2 mb-3">
+            {invites.filter((i) => i.status === 'pending').map((i) => (
+              <li key={i.id}><Badge variant="warning">Invited: {i.phone}</Badge></li>
+            ))}
+          </ul>
+        )}
+        <form onSubmit={sendInvite} className="flex gap-2">
+          <input
+            type="tel"
+            required
+            value={invitePhone}
+            onChange={(e) => setInvitePhone(e.target.value)}
+            placeholder="Sibling's phone number (e.g. +919900000000)"
+            className="flex-1 rounded-control border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+          <Button type="submit" variant="subtle" size="sm"><UserPlus className="h-3.5 w-3.5" /> Invite</Button>
+        </form>
+        {inviteStatus && <p className="text-sm text-stone-500 mt-2">{inviteStatus}</p>}
+      </Card>
 
       <Card className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

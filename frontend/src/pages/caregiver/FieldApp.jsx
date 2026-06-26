@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Camera, ShieldCheck, ShieldAlert, ImageIcon, Loader2, Pill, Check, X, WifiOff, RefreshCw } from 'lucide-react';
+import { MapPin, Navigation, Camera, ShieldCheck, ShieldAlert, ImageIcon, Loader2, Pill, Check, X, WifiOff, RefreshCw, FileText, Upload } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { Card, CardTitle } from '../../components/ui/Card';
@@ -23,7 +23,29 @@ export default function FieldApp() {
   const [medsByParent, setMedsByParent] = useState({});
   const [online, setOnline] = useState(navigator.onLine);
   const [queueCount, setQueueCount] = useState(0);
+  const [documents, setDocuments] = useState([]);
+  const [docUploading, setDocUploading] = useState(false);
   const fileInputs = useRef({});
+  const docInput = useRef(null);
+
+  function refreshDocuments() {
+    if (user?.caregiverId) {
+      api.get(`/caregivers/${user.caregiverId}/documents`).then(setDocuments).catch(() => {});
+    }
+  }
+
+  async function uploadDocument(type, file) {
+    if (!file || !user?.caregiverId) return;
+    setDocUploading(true);
+    try {
+      await api.upload(`/caregivers/${user.caregiverId}/documents`, file, 'file', { type });
+      refreshDocuments();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDocUploading(false);
+    }
+  }
 
   async function refreshQueueCount() {
     const q = await getQueue();
@@ -74,6 +96,7 @@ export default function FieldApp() {
 
   useEffect(() => {
     if (user) refresh();
+    refreshDocuments();
   }, [user]);
 
   async function markMedication(logId, parentId, status) {
@@ -156,6 +179,49 @@ export default function FieldApp() {
         </div>
       )}
       {error && <p className="text-rose-600 bg-rose-50 rounded-control px-4 py-3">{error}</p>}
+
+      <Card>
+        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-brand-500" /> Verification documents</CardTitle>
+        <p className="text-stone-400 text-xs mt-1 mb-3">Upload once — an admin reviews and approves/rejects each document.</p>
+        <input
+          ref={docInput}
+          type="file"
+          accept="image/*,application/pdf"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            const type = e.target.dataset.docType;
+            if (file && type) uploadDocument(type, file);
+            e.target.value = '';
+          }}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          {['police_verification', 'id_proof', 'reference_letter', 'training_certificate'].map((type) => (
+            <Button
+              key={type}
+              variant="outline"
+              size="sm"
+              disabled={docUploading}
+              onClick={() => {
+                docInput.current.dataset.docType = type;
+                docInput.current.click();
+              }}
+            >
+              <Upload className="h-3.5 w-3.5" /> {type.replace(/_/g, ' ')}
+            </Button>
+          ))}
+        </div>
+        {documents.length > 0 && (
+          <ul className="space-y-1 mt-3">
+            {documents.map((d) => (
+              <li key={d.id} className="flex items-center justify-between text-xs text-stone-600 border-t border-stone-100 pt-1.5">
+                <span className="capitalize">{d.type.replace(/_/g, ' ')}</span>
+                <Badge variant={d.status === 'approved' ? 'success' : d.status === 'rejected' ? 'danger' : 'warning'} className="capitalize">{d.status}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <Card>
         <CardTitle className="flex items-center gap-2"><Navigation className="h-5 w-5 text-brand-500" /> Geo (simulated device location)</CardTitle>

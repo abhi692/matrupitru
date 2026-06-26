@@ -1,10 +1,12 @@
-# MatruPitru — Phase 1 (Trust MVP)
+# MatruPitru — Trust MVP + production-readiness pass
 
-Local, runnable implementation of Phase 1 from `MatruPitru_System_Design_1.md`: family onboarding,
-geo-verified visits with proof of care, parent confirmation, SOS with dispatch, vitals/medication
-alerts, an admin/ops console, real-time chat, an AI family digest, basic localisation + voice, and
-mocked billing/services. External integrations that need real infra (Razorpay/Stripe, SMS/WhatsApp,
-cloud object storage) are stubbed the same way, swappable later without touching call sites.
+Local, runnable implementation of `MatruPitru_System_Design_1.md`, taken past the original Phase 1
+scope into the production-readiness gaps identified in a PM-style review: multi-buyer families,
+real (test-mode) Razorpay/Stripe payments, real Expo push notifications, real Daily.co video
+check-ins, an SOS escalation tree, a caregiver document-verification pipeline, a unified care
+timeline feed, caregiver ratings, seven Indian languages, an automated backend test suite, and
+structured logging + optional Sentry. Every external integration that needs real infra is gated
+behind its own env var with a documented mock fallback — nothing silently pretends to work.
 
 ## Stack
 
@@ -41,8 +43,31 @@ API runs on `http://localhost:4000`. Seed creates a demo family (see console out
 | Caregiver (Suma Patil, pending verification) | +919900000004 | password123 |
 | Admin (Priya Sharma) | +919900000099 | password123 |
 
-Optional: set `ANTHROPIC_API_KEY` in `backend/.env` to enable the AI family update digest on the
-buyer dashboard. Without it, that one feature returns a clear 503 and everything else is unaffected.
+Optional integrations — every one below is gated behind its env var; without it set, the feature
+falls back to a clear mock/503 and the rest of the app is unaffected:
+
+| Feature | Env var(s) | Without it |
+|---|---|---|
+| AI family update digest | `ANTHROPIC_API_KEY` | 503 on that one endpoint |
+| Razorpay (INR payments) | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | mock-success payment |
+| Stripe (intl payments) | `STRIPE_SECRET_KEY` (+ `VITE_STRIPE_PUBLISHABLE_KEY` in `frontend/.env`) | mock-success payment |
+| Video check-ins (Daily.co) | `DAILY_API_KEY` | 503 on video-session creation |
+| WhatsApp Business API | `WHATSAPP_BUSINESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | logs the message instead of sending |
+| Error tracking | `SENTRY_DSN` | errors go to structured logs only |
+
+Push notifications (Expo Push service) work without any extra key — the mobile app registers a real
+Expo push token on login (`PATCH /v1/me/push-token`), and the backend sends real pushes to it.
+
+### Running tests
+
+```
+cd backend
+npm test
+```
+
+Runs the full backend test suite (auth, family/invites, visit lifecycle + ratings, SOS + alerts,
+payments fallback) against a disposable SQLite database (`prisma/test.db`) — not the dev database —
+using Node's built-in test runner + supertest. See `backend/tests/`.
 
 ### Frontend
 
@@ -79,11 +104,44 @@ grace period, it auto-escalates to a missed-dose alert on its own.
 coverage, and a live SLA dashboard (geo-verified rate, missed-visit rate, SOS ack time, retention
 proxy) computed from real data — plus an audit-log viewer over the event stream.
 
-**Communication** — Real-time buyer ↔ Care Manager chat (polling-based), one thread per family.
+**Communication** — Real-time buyer ↔ Care Manager chat (polling-based), one thread per family, plus
+real video check-ins via Daily.co (`POST /v1/families/:id/video-sessions`) — a Daily room is itself
+a complete prebuilt video UI at a plain URL, so no client SDK is needed on web or mobile.
 
-**Localisation & accessibility (§1.2)** — English/Hindi/Kannada translations (not just a locale
-field) with a language switcher; the parent app additionally supports text-to-speech read-aloud and
-voice confirmation via the browser's native Web Speech API — no third-party key required.
+**Multi-buyer families** — A buyer can invite a sibling by phone (`POST /v1/families/:id/invites`);
+the invited person sees the same dashboard, alerts, and timeline once they register or log in —
+families with two or three adult children sharing care responsibility, not just one buyer.
+
+**Payments** — Real (test-mode) Razorpay for INR/UPI and Stripe for international cards, each gated
+behind its own key with a graceful mock-success fallback. Razorpay Checkout.js and Stripe Elements
+are driven from the buyer web app's Book-a-service flow; both confirm through a shared
+`POST /v1/payments/:id/verify` endpoint.
+
+**SOS escalation tree (§6.2)** — Raising SOS no longer stops at "notify the Care Manager and hope."
+A background scheduler (`backend/src/scheduler/escalation.js`) automatically works down the parent's
+emergency-contacts list every 2 minutes if nobody acknowledges, and keeps re-alerting the Care
+Manager + buyers once contacts run out — fully automated, no one has to remember to chase it up.
+
+**Caregiver verification document pipeline** — Caregivers upload police-verification / ID-proof /
+reference-letter / training-certificate documents; an admin reviews and approves/rejects each one
+individually, matching how trust verification actually works for in-home care in India (not just an
+admin flipping a status flag).
+
+**Caregiver ratings** — Buyers rate a caregiver 1–5 stars after a completed visit; the aggregate
+feeds the caregiver's rating shown to Care Managers when assigning future visits.
+
+**Care timeline feed** — A single chronological narrative (`GET /v1/families/:id/timeline`) merging
+visits, flagged vitals, alerts, medication events, and ratings into one story instead of several
+dashboard widgets a buyer has to mentally merge.
+
+**Localisation & accessibility (§1.2)** — English, Hindi, Kannada, Tamil, Telugu, Bengali, and
+Marathi translations (not just a locale field) with a language switcher; the parent app additionally
+supports text-to-speech read-aloud and voice confirmation via the browser's native Web Speech API —
+no third-party key required.
+
+**Push notifications** — The mobile app registers a real Expo push token on login; SOS, alerts, and
+medication reminders fire real Expo push notifications to whoever has one registered, in addition to
+the existing mocked SMS/WhatsApp channels.
 
 **Resilience** — The caregiver field app queues check-in/out actions in IndexedDB when offline and
 auto-syncs on reconnect; a minimal service worker caches the app shell for production builds.
@@ -97,12 +155,23 @@ phasing (AI stays minimal until the human trust loop is proven).
 **Compliance scaffold (§9)** — Explicit consent capture at family/parent creation (not just a
 timestamp default), plus an admin-visible audit log built on the event stream.
 
+**Observability** — Structured JSON request/error logging via Pino (pretty-printed in dev); optional
+Sentry error tracking gated behind `SENTRY_DSN`. An admin-only `GET /v1/admin/integrations` endpoint
+reports which optional gateways are live vs. mocked at a glance.
+
+**Testing** — An automated backend test suite (Node's built-in test runner + supertest) covering
+auth, family/sibling-invites, the full visit lifecycle + ratings, SOS + alert acknowledgement, and
+the payments mock-fallback path, run against a disposable database — see "Running tests" above.
+
 ## What's mocked / deferred
 
-- Payments (Razorpay/Stripe) — mock success responses
-- SMS/WhatsApp/voice notifications — console-logged stand-ins in `backend/src/lib/notify.js`
+- WhatsApp Business API — shaped and ready (`backend/src/lib/whatsapp.js`), pending Meta Business
+  verification; logs the message it would send until `WHATSAPP_BUSINESS_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` are set
+- SMS/voice notifications — console-logged stand-ins in `backend/src/lib/notify.js`
+- Recurring subscription billing — mocked (no gateway has a stable test-mode recurring-mandate flow
+  worth wiring up yet); one-time service payments are real
 - Native offline-first caregiver app — the web version gets the *offline-survival* property via an
-  IndexedDB sync queue instead of a native app; full native (Phase 1 open question #5) is still open
+  IndexedDB sync queue instead of a native app
 - Redis cache/queue layer — not needed at current scale; noted as a deviation from §3's diagram
 - DPDP full legal compliance — consent capture + audit log are scaffolded, but this isn't a
   substitute for actual legal review
