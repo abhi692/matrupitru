@@ -11,7 +11,11 @@ cloud object storage) are stubbed the same way, swappable later without touching
 - **Backend**: Node + Express, Prisma ORM, SQLite for local dev (swap to Postgres for prod by
   changing `datasource.provider` in `backend/prisma/schema.prisma`).
 - **Frontend**: React + Vite + Tailwind, single app with role-based views (buyer / care manager /
-  caregiver / parent / admin) standing in for the real-world surfaces described in the design doc.
+  caregiver / admin, plus a web fallback for parent) standing in for the real-world surfaces
+  described in the design doc.
+- **mobile-parent**: a real React Native (Expo) app for the parent specifically — see
+  `mobile-parent/README.md`. Built because medication alarms need to fire even when nothing is open
+  in a browser; the other four roles stay on the website since they don't need that.
 
 ## Running locally
 
