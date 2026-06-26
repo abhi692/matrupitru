@@ -9,7 +9,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["audio"],
+        "UIBackgroundModes": [
+          "audio"
+        ],
         "NSLocationWhenInUseUsageDescription": "Caregivers use your location to geo-verify visit check-in/out against the parent's home address.",
         "NSCameraUsageDescription": "Caregivers use the camera to capture proof-of-care photos during visits."
       }
@@ -21,7 +23,12 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": ["POST_NOTIFICATIONS", "SCHEDULE_EXACT_ALARM", "ACCESS_FINE_LOCATION", "CAMERA"],
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA"
+      ],
       "useNextNotificationsApi": true
     },
     "web": {
@@ -46,7 +53,8 @@
         {
           "cameraPermission": "Caregivers use the camera to capture proof-of-care photos."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

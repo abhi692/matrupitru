@@ -1,5 +1,14 @@
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+
+// Expo Go removed remote-push support entirely (Android in SDK 53, iOS earlier) —
+// calling getExpoPushTokenAsync() there logs a scary red ERROR to the console
+// every time, regardless of try/catch (it's a console.error inside the library,
+// not a thrown exception). Skipping it in Expo Go avoids the noise; it still
+// works normally in a real dev/production build. Local scheduled notifications
+// (the actual medication-alarm mechanism) are a separate API and unaffected.
+const isExpoGo = Constants.appOwnership === 'expo';
 
 // This is the actual fix for the thing the web app couldn't do: these are real
 // OS-scheduled notifications. They fire at the right time whether the app is
@@ -77,6 +86,7 @@ export function addNotificationResponseListener(callback) {
 // permission above — this needs project config (works in a dev/EAS build; in
 // Expo Go it resolves to a token scoped to Expo's own push sandbox project).
 export async function getExpoPushToken() {
+  if (isExpoGo) return null; // unsupported here — see note above; no-op, not an error
   const granted = await ensureNotificationPermissions();
   if (!granted) return null;
   try {

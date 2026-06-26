@@ -70,14 +70,30 @@ checker recommends for SDK 54) which works correctly. If `npx expo install --fix
 package to something broken, check the package's own `build/`/`lib/` output exists before assuming
 your code is wrong.
 
-**Android + Expo Go + notifications**: since SDK 53, Expo Go on Android no longer supports *remote*
-push notifications (Google policy change) and prints a warning about it on startup. This project
-only uses *local* scheduled notifications (`scheduleNotificationAsync`), which are a different code
-path and should still fire — but Expo's own guidance is that a development build
-(`eas build --profile development` or `npx expo run:android`) is the only fully-supported way to
-test notifications on Android going forward. If alarms don't fire reliably in Expo Go on an Android
-device, that's the next thing to try — this wasn't testable from the dev environment this was built
-in (no physical device/emulator available).
+**Android + Expo Go + notifications**: since SDK 53, Expo Go no longer supports *remote* push
+notifications (a Google/Apple policy change, not a bug in this app) and prints an `ERROR` about it
+on startup. This project only uses *local* scheduled notifications (`scheduleNotificationAsync`) for
+the medication alarm itself — a different code path that fires fine in Expo Go. The one place that
+genuinely needs remote push is `getExpoPushToken()` in `src/lib/notifications.js` (used to register
+this device for instant SOS/alert/reminder pushes from the backend); it now detects Expo Go
+(`Constants.appOwnership === 'expo'`) and skips itself there instead of logging the error on every
+login — push registration silently no-ops in Expo Go and works normally in a real dev/EAS build.
+
+**Dropdowns (Select component)**: the original implementation used the native
+`@react-native-picker/picker` widget, which has long-standing rendering bugs in Expo Go on Android —
+on some devices/Android versions the dropdown either doesn't open or opens with no visible/tappable
+rows. `src/components/Select.js` was rewritten as a custom `Modal` + list picker (no native widget
+dependency), which renders identically and reliably on every device. Same props (`value`,
+`onValueChange`, `items`, `placeholder`), so nothing else needed to change.
+
+**Daily medication times**: replaced the "type HH:MM, comma separated" text field with
+`src/components/TimeListPicker.js` — an "Add time" button that opens the device's native clock UI
+(`@react-native-community/datetimepicker`) and adds a removable chip per time, building the same
+`["HH:MM", ...]` array the backend schedule API expects.
+
+If you change Metro/node_modules after the dev server is already running (e.g. installing a new
+package), restart with `npx expo start --clear` — a stale Metro cache from before the install can
+cause `Unable to resolve module` errors that look like real bugs but are just an out-of-date cache.
 
 ## Demo accounts (password123 for all)
 

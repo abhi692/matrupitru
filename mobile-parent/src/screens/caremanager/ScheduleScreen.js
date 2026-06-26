@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { api } from '../../api/client';
 import { Card, CardTitle, Button, Input, Label, ErrorBox, ScreenTitle } from '../../components/ui';
 import Select from '../../components/Select';
+import TimeListPicker from '../../components/TimeListPicker';
 import { colors } from '../../theme';
 
 export default function ScheduleScreen() {
@@ -12,7 +13,7 @@ export default function ScheduleScreen() {
 
   const [visitForm, setVisitForm] = useState({ parentId: '', caregiverId: '', type: 'attendant' });
   const [visitStatus, setVisitStatus] = useState('');
-  const [medForm, setMedForm] = useState({ parentId: '', medication: '', timesOfDay: '08:00' });
+  const [medForm, setMedForm] = useState({ parentId: '', medication: '', timesOfDay: ['08:00'] });
   const [medStatus, setMedStatus] = useState('');
 
   const load = useCallback(() => {
@@ -42,10 +43,15 @@ export default function ScheduleScreen() {
 
   async function scheduleMedication() {
     setMedStatus('');
+    if (medForm.timesOfDay.length === 0) {
+      setMedStatus('Error: add at least one time.');
+      return;
+    }
     try {
-      const timesOfDay = medForm.timesOfDay.split(',').map((t) => t.trim()).filter(Boolean);
-      await api.post(`/parents/${medForm.parentId}/medication-schedules`, { medication: medForm.medication, timesOfDay, gracePeriodMinutes: 15 });
-      setMedStatus(`✓ Fires automatically every day at ${timesOfDay.join(', ')}.`);
+      await api.post(`/parents/${medForm.parentId}/medication-schedules`, {
+        medication: medForm.medication, timesOfDay: medForm.timesOfDay, gracePeriodMinutes: 15,
+      });
+      setMedStatus(`✓ Fires automatically every day at ${medForm.timesOfDay.join(', ')}.`);
     } catch (err) {
       setMedStatus(`Error: ${err.message}`);
     }
@@ -63,8 +69,8 @@ export default function ScheduleScreen() {
         <Select value={medForm.parentId} onValueChange={(v) => setMedForm({ ...medForm, parentId: v })} items={allParents.map((p) => ({ value: p.id, label: `${p.user.name} (${p.familyName})` }))} />
         <Label>Medication</Label>
         <Input value={medForm.medication} onChangeText={(v) => setMedForm({ ...medForm, medication: v })} placeholder="Amlodipine 5mg" placeholderTextColor={colors.textTertiary} />
-        <Label>Daily times (HH:MM, comma separated)</Label>
-        <Input value={medForm.timesOfDay} onChangeText={(v) => setMedForm({ ...medForm, timesOfDay: v })} placeholder="08:00, 20:00" placeholderTextColor={colors.textTertiary} />
+        <Label>Daily times</Label>
+        <TimeListPicker times={medForm.timesOfDay} onChange={(v) => setMedForm({ ...medForm, timesOfDay: v })} />
         <Button onPress={scheduleMedication} icon="add-circle-outline" style={{ marginTop: 8 }}>Set up reminder</Button>
         {medStatus ? <Text style={s.status}>{medStatus}</Text> : null}
       </Card>
