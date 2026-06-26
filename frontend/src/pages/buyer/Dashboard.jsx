@@ -211,7 +211,7 @@ export default function Dashboard() {
               <li key={m.id} className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5">
                 <span className="font-medium text-stone-700">{m.medication}</span>
                 <span className="text-right text-xs">
-                  <Badge variant={m.status === 'given' ? 'success' : m.status === 'missed' ? 'danger' : 'neutral'} className="capitalize">
+                  <Badge variant={m.status === 'given' ? 'success' : m.status === 'missed' ? 'danger' : m.status === 'due' ? 'warning' : 'neutral'} className="capitalize">
                     {m.status}
                   </Badge>
                   <br />

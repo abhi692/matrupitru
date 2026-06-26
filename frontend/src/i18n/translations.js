@@ -28,6 +28,8 @@ export const translations = {
     listenAloud: 'Listen aloud',
     speakToConfirm: 'Speak to confirm',
     listening: 'Listening...',
+    medicationTime: 'Time for your medicine',
+    iTookIt: 'I took it',
   },
   hi: {
     namaste: 'नमस्ते',
@@ -49,6 +51,8 @@ export const translations = {
     listenAloud: 'सुनें',
     speakToConfirm: 'पुष्टि करने के लिए बोलें',
     listening: 'सुन रहा है...',
+    medicationTime: 'आपकी दवा का समय हो गया है',
+    iTookIt: 'मैंने ले ली',
   },
   kn: {
     namaste: 'ನಮಸ್ತೆ',
@@ -70,6 +74,8 @@ export const translations = {
     listenAloud: 'ಕೇಳಿ',
     speakToConfirm: 'ದೃಢೀಕರಿಸಲು ಮಾತನಾಡಿ',
     listening: 'ಕೇಳುತ್ತಿದೆ...',
+    medicationTime: 'ನಿಮ್ಮ ಔಷಧಿ ಸಮಯ',
+    iTookIt: 'ನಾನು ತೆಗೆದುಕೊಂಡೆ',
   },
 };
 

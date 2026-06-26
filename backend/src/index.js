@@ -15,6 +15,7 @@ import { adminRouter } from './modules/admin/routes.js';
 import { aiRouter } from './modules/ai/routes.js';
 import { omitPasswordHash } from './lib/sanitize.js';
 import { UPLOAD_DIR } from './lib/upload.js';
+import { startMedicationScheduler } from './scheduler/medication.js';
 
 const app = express();
 app.use(cors());
@@ -52,3 +53,4 @@ app.use((err, req, res, next) => {
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`MatruPitru API listening on :${port}`));
+startMedicationScheduler();

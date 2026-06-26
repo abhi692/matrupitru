@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Users, CalendarPlus, MapPin, MessageCircle, Pill } from 'lucide-react';
+import { AlertTriangle, Users, CalendarPlus, MapPin, MessageCircle, Pill, Repeat } from 'lucide-react';
 import { api } from '../../api/client';
-import { Card, CardTitle } from '../../components/ui/Card';
+import { Card, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input, Label } from '../../components/ui/Input';
@@ -20,11 +20,19 @@ export default function Console() {
   const [scheduleStatus, setScheduleStatus] = useState('');
   const [activeFamilyId, setActiveFamilyId] = useState('');
   const [activeThreadId, setActiveThreadId] = useState(null);
-  const [medForm, setMedForm] = useState({ parentId: '', medication: '', scheduledAt: '' });
+  const [medForm, setMedForm] = useState({ parentId: '', medication: '', timesOfDay: '', gracePeriodMinutes: 15 });
   const [medStatus, setMedStatus] = useState('');
+  const [schedulesByParent, setSchedulesByParent] = useState({});
 
   function refresh() {
-    api.get('/families').then(setFamilies).catch((e) => setError(e.message));
+    api.get('/families').then((fams) => {
+      setFamilies(fams);
+      fams.flatMap((f) => f.parents).forEach((p) => {
+        api.get(`/parents/${p.id}/medication-schedules`).then((s) =>
+          setSchedulesByParent((m) => ({ ...m, [p.id]: s }))
+        );
+      });
+    }).catch((e) => setError(e.message));
     api.get('/alerts').then(setAlerts).catch((e) => setError(e.message));
     api.get('/caregivers').then(setCaregivers).catch((e) => setError(e.message));
   }
@@ -57,14 +65,23 @@ export default function Console() {
     e.preventDefault();
     setMedStatus('');
     try {
-      await api.post(`/parents/${medForm.parentId}/medications`, {
+      const timesOfDay = medForm.timesOfDay.split(',').map((t) => t.trim()).filter(Boolean);
+      await api.post(`/parents/${medForm.parentId}/medication-schedules`, {
         medication: medForm.medication,
-        scheduledAt: medForm.scheduledAt,
+        timesOfDay,
+        gracePeriodMinutes: Number(medForm.gracePeriodMinutes) || 15,
       });
-      setMedStatus('Medication reminder scheduled.');
+      setMedStatus(`Set up — fires automatically every day at ${timesOfDay.join(', ')}. No further action needed.`);
+      refresh();
     } catch (err) {
       setMedStatus(`Error: ${err.message}`);
     }
+  }
+
+  async function toggleSchedule(scheduleId, parentId, active) {
+    await api.patch(`/medication-schedules/${scheduleId}`, { active });
+    const updated = await api.get(`/parents/${parentId}/medication-schedules`);
+    setSchedulesByParent((m) => ({ ...m, [parentId]: updated }));
   }
 
   async function openThread(familyId) {
@@ -135,8 +152,13 @@ export default function Console() {
       </Card>
 
       <Card>
-        <CardTitle className="flex items-center gap-2"><Pill className="h-5 w-5 text-brand-500" /> Schedule a medication reminder</CardTitle>
-        <form onSubmit={scheduleMedication} className="space-y-4 mt-3">
+        <CardTitle className="flex items-center gap-2"><Repeat className="h-5 w-5 text-brand-500" /> Medication reminders (set once, runs forever)</CardTitle>
+        <CardDescription className="mb-4">
+          Set the daily times and the system automatically rings an alarm on the parent's phone
+          every day, with no one re-entering it. If they don't respond, it auto-escalates to an
+          alert — no caregiver visit required.
+        </CardDescription>
+        <form onSubmit={scheduleMedication} className="space-y-4">
           <div>
             <Label>Parent</Label>
             <Select value={medForm.parentId} onChange={(e) => setMedForm({ ...medForm, parentId: e.target.value })}>
@@ -151,12 +173,38 @@ export default function Console() {
             <Input value={medForm.medication} onChange={(e) => setMedForm({ ...medForm, medication: e.target.value })} placeholder="Amlodipine 5mg" />
           </div>
           <div>
-            <Label>Scheduled at</Label>
-            <Input type="datetime-local" value={medForm.scheduledAt} onChange={(e) => setMedForm({ ...medForm, scheduledAt: e.target.value })} />
+            <Label>Daily times (comma separated, 24h HH:MM)</Label>
+            <Input value={medForm.timesOfDay} onChange={(e) => setMedForm({ ...medForm, timesOfDay: e.target.value })} placeholder="08:00, 20:00" />
           </div>
-          <Button type="submit" size="lg" className="w-full">Schedule reminder</Button>
+          <div>
+            <Label>Grace period before auto-escalating (minutes)</Label>
+            <Input type="number" value={medForm.gracePeriodMinutes} onChange={(e) => setMedForm({ ...medForm, gracePeriodMinutes: e.target.value })} />
+          </div>
+          <Button type="submit" size="lg" className="w-full">Set up automatic reminder</Button>
           {medStatus && <p className="text-sm text-stone-500 text-center">{medStatus}</p>}
         </form>
+
+        {allParents.some((p) => schedulesByParent[p.id]?.length > 0) && (
+          <div className="mt-5 space-y-2">
+            <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Active reminders</h4>
+            {allParents.map((p) =>
+              (schedulesByParent[p.id] || []).map((s) => (
+                <div key={s.id} className="flex items-center justify-between text-sm border border-stone-100 rounded-control px-3 py-2.5">
+                  <span>
+                    <span className="font-medium text-stone-700">{s.medication}</span>
+                    <span className="text-stone-400"> — {p.user.name} — {JSON.parse(s.timesOfDayJson).join(', ')}</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={s.active ? 'success' : 'neutral'}>{s.active ? 'Active' : 'Paused'}</Badge>
+                    <Button size="sm" variant="outline" onClick={() => toggleSchedule(s.id, p.id, !s.active)}>
+                      {s.active ? 'Pause' : 'Resume'}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </Card>
 
       <Card>

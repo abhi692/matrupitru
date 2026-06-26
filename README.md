@@ -63,8 +63,13 @@ rating surfaced to the buyer.
 channels, auto-dispatches the nearest available verified caregiver, and places the parent's
 preferred hospital on standby — all console-logged, all real backend logic.
 
-**Health (§6.3, §1.1)** — Vitals with rule-based out-of-range flagging; medication reminders with
-adherence logging (given/missed) that raises real alerts on a missed dose.
+**Health (§6.3, §1.1)** — Vitals with rule-based out-of-range flagging. Medication reminders are
+fully automated end to end: a buyer/Care Manager sets up a recurring schedule once ("Amlodipine,
+daily at 08:00 and 20:00"), and a backend scheduler (`backend/src/scheduler/medication.js`, runs
+every 30s) generates each day's reminder, fires it automatically, and rings a real audible alarm +
+voice announcement on the parent's device (Web Audio + speech synthesis) when it's due — no
+caregiver visit or manual entry involved. If the parent doesn't acknowledge within the configured
+grace period, it auto-escalates to a missed-dose alert on its own.
 
 **Admin/ops (§1.1)** — Dedicated admin console: verify/reject caregivers, manage per-caregiver city
 coverage, and a live SLA dashboard (geo-verified rate, missed-visit rate, SOS ack time, retention
