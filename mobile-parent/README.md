@@ -57,6 +57,22 @@ ahead of what's actually published in the App Store's Expo Go binary. This proje
 SDK 54 specifically because it's had time to propagate — if you still hit this, check
 `npm view expo dist-tags` for the newest SDK that's been out a while and `npx expo install expo@<version> && npx expo install --fix` to match it.
 
+**Same issue can hit individual packages, not just Expo itself** — `@expo/vector-icons`'s "latest"
+(15.1.1 at time of writing) ships a broken `main` field pointing at a file that doesn't exist in
+the published package. This project is pinned to `15.0.3` (the version Expo's own compatibility
+checker recommends for SDK 54) which works correctly. If `npx expo install --fix` ever bumps a
+package to something broken, check the package's own `build/`/`lib/` output exists before assuming
+your code is wrong.
+
+**Android + Expo Go + notifications**: since SDK 53, Expo Go on Android no longer supports *remote*
+push notifications (Google policy change) and prints a warning about it on startup. This project
+only uses *local* scheduled notifications (`scheduleNotificationAsync`), which are a different code
+path and should still fire — but Expo's own guidance is that a development build
+(`eas build --profile development` or `npx expo run:android`) is the only fully-supported way to
+test notifications on Android going forward. If alarms don't fire reliably in Expo Go on an Android
+device, that's the next thing to try — this wasn't testable from the dev environment this was built
+in (no physical device/emulator available).
+
 ## Demo accounts (password123 for all)
 
 | Role | Phone |

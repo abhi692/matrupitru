@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius } from '../theme';
 
+// Plain ScrollView instead of FlatList on purpose: this panel is always used
+// inside a screen that's already a ScrollView, and nesting a FlatList
+// (VirtualizedList) inside one breaks windowing and throws an RN warning.
+// Chat history here is small enough that virtualization isn't needed anyway.
 export default function ChatPanel({ threadId }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [body, setBody] = useState('');
-  const listRef = useRef(null);
+  const scrollRef = useRef(null);
 
   function refresh() {
     if (!threadId) return;
@@ -22,6 +26,10 @@ export default function ChatPanel({ threadId }) {
     const interval = setInterval(refresh, 4000);
     return () => clearInterval(interval);
   }, [threadId]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
 
   async function send() {
     if (!body.trim()) return;
@@ -38,23 +46,19 @@ export default function ChatPanel({ threadId }) {
 
   return (
     <View style={s.container}>
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={(m) => m.id}
-        style={s.list}
-        renderItem={({ item }) => {
+      <ScrollView ref={scrollRef} style={s.list} contentContainerStyle={s.listContent}>
+        {messages.map((item) => {
           const mine = item.senderId === user.id;
           return (
-            <View style={[s.bubbleRow, mine && s.bubbleRowMine]}>
+            <View key={item.id} style={[s.bubbleRow, mine && s.bubbleRowMine]}>
               <View style={[s.bubble, mine ? s.bubbleMine : s.bubbleTheirs]}>
                 {!mine && <Text style={s.sender}>{item.sender.name}</Text>}
                 <Text style={mine ? s.bubbleTextMine : s.bubbleText}>{item.body}</Text>
               </View>
             </View>
           );
-        }}
-      />
+        })}
+      </ScrollView>
       <View style={s.inputRow}>
         <TextInput style={s.input} value={body} onChangeText={setBody} placeholder="Message..." placeholderTextColor={colors.textTertiary} />
         <TouchableOpacity style={s.sendButton} onPress={send}>
@@ -68,6 +72,7 @@ export default function ChatPanel({ threadId }) {
 const s = StyleSheet.create({
   container: { height: 340 },
   list: { flex: 1 },
+  listContent: { paddingBottom: 4 },
   muted: { color: colors.textTertiary, fontSize: 14 },
   bubbleRow: { marginVertical: 3, alignItems: 'flex-start' },
   bubbleRowMine: { alignItems: 'flex-end' },
