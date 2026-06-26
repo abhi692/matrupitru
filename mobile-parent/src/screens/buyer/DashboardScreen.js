@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Card, CardTitle, Badge, Button, ErrorBox } from '../../components/ui';
+import { Card, CardTitle, Badge, Button, ErrorBox, EmptyState } from '../../components/ui';
 import { colors } from '../../theme';
 
 export default function DashboardScreen({ navigation }) {
@@ -18,10 +19,7 @@ export default function DashboardScreen({ navigation }) {
       const d = await api.get(`/families/${user.familyId}/dashboard`);
       setData(d);
       const parentId = d.parents[0]?.id;
-      if (parentId) {
-        const m = await api.get(`/parents/${parentId}/medications`);
-        setMeds(m);
-      }
+      if (parentId) setMeds(await api.get(`/parents/${parentId}/medications`));
     } catch (err) {
       setError(err.message);
     }
@@ -38,7 +36,7 @@ export default function DashboardScreen({ navigation }) {
   if (!user?.familyId) {
     return (
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.muted}>No family set up yet. Onboarding from mobile isn't built — use the website to onboard a parent first, then come back here.</Text>
+        <Card><EmptyState icon="person-add-outline" text="No family set up yet. Onboard a parent from the website first." /></Card>
       </ScrollView>
     );
   }
@@ -53,14 +51,19 @@ export default function DashboardScreen({ navigation }) {
       <View style={s.headRow}>
         <View>
           <Text style={s.parentName}>{parent ? parent.user.name : 'Your parent'}</Text>
-          {parent?.address ? <Text style={s.muted}>{parent.address}</Text> : null}
+          {parent?.address ? (
+            <View style={s.addrRow}>
+              <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+              <Text style={s.muted}>{parent.address}</Text>
+            </View>
+          ) : null}
         </View>
         <TouchableOpacity onPress={logout}><Text style={s.logout}>Log out</Text></TouchableOpacity>
       </View>
 
       {data.openAlerts.length > 0 && (
-        <Card style={{ borderColor: colors.warm200, borderWidth: 1 }}>
-          <CardTitle style={{ color: colors.warm600 }}>Open alerts</CardTitle>
+        <Card style={{ backgroundColor: colors.warningSoft }}>
+          <CardTitle icon="alert-circle-outline" style={{ color: colors.warning }}>Open alerts</CardTitle>
           {data.openAlerts.map((a) => (
             <View key={a.id} style={s.row}>
               <Text style={s.rowText}>{a.type.replace(/_/g, ' ')}</Text>
@@ -71,8 +74,8 @@ export default function DashboardScreen({ navigation }) {
       )}
 
       <Card>
-        <CardTitle>Upcoming visits</CardTitle>
-        {data.upcomingVisits.length === 0 ? <Text style={s.muted}>No visits scheduled.</Text> : (
+        <CardTitle icon="calendar-outline">Upcoming visits</CardTitle>
+        {data.upcomingVisits.length === 0 ? <EmptyState icon="calendar-outline" text="No visits scheduled." /> : (
           data.upcomingVisits.map((v) => (
             <View key={v.id} style={s.row}>
               <Text style={s.rowText}>{v.type}</Text>
@@ -83,12 +86,12 @@ export default function DashboardScreen({ navigation }) {
       </Card>
 
       <Card>
-        <CardTitle>Recent activity — proof of care</CardTitle>
-        {data.recentVisits.length === 0 ? <Text style={s.muted}>No completed visits yet.</Text> : (
+        <CardTitle icon="shield-checkmark-outline">Proof of care</CardTitle>
+        {data.recentVisits.length === 0 ? <EmptyState icon="image-outline" text="No completed visits yet." /> : (
           data.recentVisits.map((v) => (
-            <TouchableOpacity key={v.id} style={s.row} onPress={() => navigation.navigate('VisitDetail', { visitId: v.id })}>
+            <TouchableOpacity key={v.id} style={s.row} onPress={() => navigation.navigate('VisitDetail', { visitId: v.id })} activeOpacity={0.6}>
               <Text style={s.rowText}>{v.type}</Text>
-              <Badge variant={v.geoVerified ? 'success' : 'warning'}>{v.geoVerified ? 'Geo-verified' : 'Not verified'}</Badge>
+              <Badge variant={v.geoVerified ? 'success' : 'warning'}>{v.geoVerified ? 'Verified' : 'Not verified'}</Badge>
             </TouchableOpacity>
           ))
         )}
@@ -96,7 +99,7 @@ export default function DashboardScreen({ navigation }) {
 
       {meds.length > 0 && (
         <Card>
-          <CardTitle>Medication adherence</CardTitle>
+          <CardTitle icon="medical-outline">Medication adherence</CardTitle>
           {meds.slice(0, 6).map((m) => (
             <View key={m.id} style={s.row}>
               <Text style={s.rowText}>{m.medication}</Text>
@@ -107,7 +110,7 @@ export default function DashboardScreen({ navigation }) {
       )}
 
       <Card>
-        <CardTitle>Care plan</CardTitle>
+        <CardTitle icon="ribbon-outline">Care plan</CardTitle>
         <Text style={s.muted}>Tier: {data.carePlan?.tier?.replace(/_/g, ' ') || 'none'}</Text>
       </Card>
     </ScrollView>
@@ -115,12 +118,13 @@ export default function DashboardScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  content: { padding: 18, paddingTop: 54, paddingBottom: 40 },
+  content: { padding: 18, paddingTop: 60, paddingBottom: 40 },
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 },
-  parentName: { fontSize: 24, fontWeight: '800', color: colors.stone800 },
-  logout: { color: colors.stone500, fontSize: 13 },
-  muted: { color: colors.stone400, fontSize: 14 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.stone100 },
-  rowText: { fontSize: 14, color: colors.stone700, textTransform: 'capitalize' },
-  rowSub: { fontSize: 12, color: colors.stone400 },
+  parentName: { fontSize: 24, fontWeight: '800', color: colors.textPrimary },
+  addrRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  logout: { color: colors.textTertiary, fontSize: 13 },
+  muted: { color: colors.textTertiary, fontSize: 13 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.separator },
+  rowText: { fontSize: 14, color: colors.textPrimary, textTransform: 'capitalize' },
+  rowSub: { fontSize: 12, color: colors.textTertiary },
 });

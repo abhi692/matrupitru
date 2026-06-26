@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, AppState } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { scheduleAllReminders } from '../../lib/notifications';
+import { colors, radius, shadow } from '../../theme';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -25,9 +27,6 @@ export default function HomeScreen() {
       if (p) {
         const meds = await api.get(`/parents/${p.id}/medications`);
         setDueMeds(meds.filter((m) => m.status === 'due'));
-
-        // Re-sync OS-scheduled alarms with whatever the Care Manager has set up —
-        // covers new/paused reminders without needing a background sync.
         const schedules = await api.get(`/parents/${p.id}/medication-schedules`);
         await scheduleAllReminders(schedules);
       }
@@ -38,8 +37,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     refresh();
-    // Re-sync whenever the app comes back to the foreground (e.g. user opened
-    // it after a notification fired) — this is also when OS alarms get refreshed.
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') refresh();
     });
@@ -82,7 +79,7 @@ export default function HomeScreen() {
     if (!parent) return;
     setSosStatus('');
     try {
-      const result = await api.post(`/parents/${parent.id}/sos`, {});
+      await api.post(`/parents/${parent.id}/sos`, {});
       setSosStatus('Help is on the way. Your family and Care Manager have been notified.');
       Speech.speak('Help is on the way.', { language: 'en-US' });
     } catch (err) {
@@ -107,16 +104,20 @@ export default function HomeScreen() {
 
       {dueMeds.map((med) => (
         <View key={med.id} style={styles.alarmCard}>
-          <Text style={styles.alarmTitle}>🔔 Time for your medicine</Text>
+          <View style={styles.alarmHead}>
+            <Ionicons name="alarm" size={20} color={colors.warning} />
+            <Text style={styles.alarmTitle}>Time for your medicine</Text>
+          </View>
           <Text style={styles.alarmMed}>{med.medication}</Text>
-          <TouchableOpacity style={styles.takeButton} onPress={() => takeMedication(med.id)}>
+          <TouchableOpacity style={styles.takeButton} onPress={() => takeMedication(med.id)} activeOpacity={0.8}>
             <Text style={styles.takeButtonText}>I took it</Text>
           </TouchableOpacity>
         </View>
       ))}
 
-      <TouchableOpacity style={styles.sosButton} onPress={raiseSos}>
-        <Text style={styles.sosButtonText}>🚨  I need help</Text>
+      <TouchableOpacity style={styles.sosButton} onPress={raiseSos} activeOpacity={0.85}>
+        <Ionicons name="warning" size={22} color="#fff" />
+        <Text style={styles.sosButtonText}>I need help</Text>
       </TouchableOpacity>
       {sosStatus ? <Text style={styles.sosStatus}>{sosStatus}</Text> : null}
 
@@ -128,7 +129,7 @@ export default function HomeScreen() {
           pendingConfirm.map((v) => (
             <View key={v.id} style={styles.visitRow}>
               <Text style={styles.visitText}>{v.type} visit — {new Date(v.checkOutAt).toLocaleString()}</Text>
-              <TouchableOpacity style={styles.confirmButton} onPress={() => confirmVisit(v.id)}>
+              <TouchableOpacity style={styles.confirmButton} onPress={() => confirmVisit(v.id)} activeOpacity={0.8}>
                 <Text style={styles.confirmButtonText}>Yes, they visited</Text>
               </TouchableOpacity>
             </View>
@@ -140,25 +141,26 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7f7f5' },
+  container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 20, paddingTop: 60 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  greeting: { fontSize: 26, fontWeight: '800', color: '#0c5945' },
-  logout: { color: '#78716c', fontSize: 13 },
-  errorBox: { backgroundColor: '#fde8ea', color: '#b00020', padding: 12, borderRadius: 10, marginBottom: 16 },
-  alarmCard: { backgroundColor: '#fff8e6', borderWidth: 2, borderColor: '#ffe6a3', borderRadius: 20, padding: 20, marginBottom: 16 },
-  alarmTitle: { fontSize: 16, fontWeight: '700', color: '#b06000', marginBottom: 6 },
-  alarmMed: { fontSize: 20, fontWeight: '700', color: '#292524', marginBottom: 14 },
-  takeButton: { backgroundColor: '#1d9e75', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  takeButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  sosButton: { backgroundColor: '#b00020', borderRadius: 20, paddingVertical: 22, alignItems: 'center', marginBottom: 14 },
-  sosButtonText: { color: '#fff', fontWeight: '800', fontSize: 19 },
-  sosStatus: { backgroundColor: '#e1f5ee', color: '#0c5945', padding: 12, borderRadius: 10, marginBottom: 16, fontSize: 15 },
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, shadowColor: '#0f6e56', shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: '#292524', marginBottom: 12 },
-  muted: { color: '#a8a29e', fontSize: 15 },
-  visitRow: { borderWidth: 1, borderColor: '#f0efe9', borderRadius: 12, padding: 14, marginBottom: 10 },
-  visitText: { fontSize: 15, color: '#44403c', marginBottom: 10, textTransform: 'capitalize' },
-  confirmButton: { backgroundColor: '#1d9e75', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  confirmButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 },
+  greeting: { fontSize: 26, fontWeight: '800', color: colors.textPrimary },
+  logout: { color: colors.textTertiary, fontSize: 13 },
+  errorBox: { backgroundColor: colors.dangerSoft, color: colors.danger, padding: 12, borderRadius: radius.control, marginBottom: 16 },
+  alarmCard: { backgroundColor: colors.warningSoft, borderRadius: radius.card, padding: 22, marginBottom: 16, ...shadow },
+  alarmHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  alarmTitle: { fontSize: 15, fontWeight: '700', color: colors.warning },
+  alarmMed: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 16 },
+  takeButton: { backgroundColor: colors.accent, borderRadius: radius.control, paddingVertical: 16, alignItems: 'center' },
+  takeButtonText: { color: '#fff', fontWeight: '700', fontSize: 17 },
+  sosButton: { flexDirection: 'row', gap: 10, backgroundColor: colors.danger, borderRadius: radius.card, paddingVertical: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 14, ...shadow },
+  sosButtonText: { color: '#fff', fontWeight: '700', fontSize: 19 },
+  sosStatus: { backgroundColor: colors.successSoft, color: colors.accentDark, padding: 14, borderRadius: radius.control, marginBottom: 16, fontSize: 15 },
+  card: { backgroundColor: colors.surface, borderRadius: radius.card, padding: 22, ...shadow },
+  cardTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 14 },
+  muted: { color: colors.textTertiary, fontSize: 15 },
+  visitRow: { backgroundColor: colors.surfaceAlt, borderRadius: radius.control, padding: 16, marginBottom: 10 },
+  visitText: { fontSize: 15, color: colors.textSecondary, marginBottom: 12, textTransform: 'capitalize' },
+  confirmButton: { backgroundColor: colors.accent, borderRadius: radius.control, paddingVertical: 13, alignItems: 'center' },
+  confirmButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Card, CardTitle, CardDescription, Badge, Button, ErrorBox } from '../../components/ui';
-import { colors } from '../../theme';
+import { Card, CardTitle, CardDescription, Badge, Button, ErrorBox, EmptyState, ScreenTitle } from '../../components/ui';
+import { colors, radius } from '../../theme';
 
 export default function SosScreen() {
   const { user } = useAuth();
@@ -37,15 +38,11 @@ export default function SosScreen() {
 
   return (
     <ScrollView contentContainerStyle={s.content}>
-      <Card style={{ borderColor: colors.rose50, borderWidth: 1 }}>
-        <CardTitle style={{ color: colors.rose700 }}>Emergency (SOS)</CardTitle>
-        <CardDescription>
-          Raising this notifies the Care Manager and you across channels, and dispatches the
-          nearest available caregiver.
-        </CardDescription>
-        <Button variant="emergency" onPress={raiseSos} style={{ paddingVertical: 18 }}>
-          🚨  Raise SOS now
-        </Button>
+      <ScreenTitle>SOS</ScreenTitle>
+      <Card style={{ backgroundColor: colors.dangerSoft }}>
+        <CardTitle icon="alert" style={{ color: colors.danger }}>Emergency</CardTitle>
+        <CardDescription>Notifies the Care Manager and you, and dispatches the nearest caregiver.</CardDescription>
+        <Button variant="emergency" onPress={raiseSos} icon="warning" style={{ paddingVertical: 18 }}>Raise SOS now</Button>
         <ErrorBox>{error}</ErrorBox>
         {result && (
           <View style={s.resultBox}>
@@ -58,8 +55,8 @@ export default function SosScreen() {
       </Card>
 
       <Card>
-        <CardTitle>Alert history</CardTitle>
-        {alerts.length === 0 ? <Text style={s.muted}>No alerts yet.</Text> : (
+        <CardTitle icon="time-outline">Alert history</CardTitle>
+        {alerts.length === 0 ? <EmptyState icon="checkmark-circle-outline" text="No alerts yet." /> : (
           alerts.map((a) => (
             <View key={a.id} style={s.row}>
               <Text style={s.rowText}>{a.type.replace(/_/g, ' ')}</Text>
@@ -73,10 +70,9 @@ export default function SosScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { padding: 18 },
-  muted: { color: colors.stone400, fontSize: 14 },
-  resultBox: { backgroundColor: colors.brand50, borderRadius: 10, padding: 12, marginTop: 10 },
-  resultText: { color: colors.brand700, fontSize: 13 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.stone100 },
-  rowText: { fontSize: 14, color: colors.stone700, textTransform: 'capitalize' },
+  content: { padding: 18, paddingTop: 60, paddingBottom: 40 },
+  resultBox: { backgroundColor: colors.successSoft, borderRadius: radius.control, padding: 12, marginTop: 10 },
+  resultText: { color: colors.accentDark, fontSize: 13 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.separator },
+  rowText: { fontSize: 14, color: colors.textPrimary, textTransform: 'capitalize' },
 });

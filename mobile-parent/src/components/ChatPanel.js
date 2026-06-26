@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme';
+import { colors, radius } from '../theme';
 
 export default function ChatPanel({ threadId }) {
   const { user } = useAuth();
@@ -55,9 +56,9 @@ export default function ChatPanel({ threadId }) {
         }}
       />
       <View style={s.inputRow}>
-        <TextInput style={s.input} value={body} onChangeText={setBody} placeholder="Type a message..." />
+        <TextInput style={s.input} value={body} onChangeText={setBody} placeholder="Message..." placeholderTextColor={colors.textTertiary} />
         <TouchableOpacity style={s.sendButton} onPress={send}>
-          <Text style={s.sendButtonText}>Send</Text>
+          <Ionicons name="send" size={18} color={colors.white} />
         </TouchableOpacity>
       </View>
     </View>
@@ -65,19 +66,18 @@ export default function ChatPanel({ threadId }) {
 }
 
 const s = StyleSheet.create({
-  container: { height: 320 },
+  container: { height: 340 },
   list: { flex: 1 },
-  muted: { color: colors.stone400, fontSize: 14 },
+  muted: { color: colors.textTertiary, fontSize: 14 },
   bubbleRow: { marginVertical: 3, alignItems: 'flex-start' },
   bubbleRowMine: { alignItems: 'flex-end' },
-  bubble: { maxWidth: '78%', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
-  bubbleMine: { backgroundColor: colors.brand500 },
-  bubbleTheirs: { backgroundColor: colors.stone100 },
-  sender: { fontSize: 10, fontWeight: '700', color: colors.stone500, marginBottom: 2 },
-  bubbleText: { color: colors.stone700, fontSize: 14 },
+  bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9 },
+  bubbleMine: { backgroundColor: colors.accent },
+  bubbleTheirs: { backgroundColor: colors.surfaceAlt },
+  sender: { fontSize: 10, fontWeight: '700', color: colors.textSecondary, marginBottom: 2 },
+  bubbleText: { color: colors.textPrimary, fontSize: 14 },
   bubbleTextMine: { color: colors.white, fontSize: 14 },
-  inputRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  input: { flex: 1, borderWidth: 1, borderColor: colors.stone200, borderRadius: 10, paddingHorizontal: 12, height: 42 },
-  sendButton: { backgroundColor: colors.brand500, borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' },
-  sendButtonText: { color: colors.white, fontWeight: '700' },
+  inputRow: { flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' },
+  input: { flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: radius.control, paddingHorizontal: 14, height: 44, color: colors.textPrimary },
+  sendButton: { backgroundColor: colors.accent, borderRadius: radius.control, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

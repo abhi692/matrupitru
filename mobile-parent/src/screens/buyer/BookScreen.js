@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Card, CardTitle, Button } from '../../components/ui';
-import { colors } from '../../theme';
+import { Card, CardTitle, Button, ScreenTitle } from '../../components/ui';
+import { colors, radius, shadow } from '../../theme';
+
+const ICONS = {
+  'doctor-visit': 'medkit-outline',
+  physio: 'fitness-outline',
+  'attendant-day': 'person-outline',
+  diagnostics: 'flask-outline',
+  medicines: 'medical-outline',
+  errand: 'bag-outline',
+};
 
 export default function BookScreen() {
   const { user } = useAuth();
@@ -27,7 +37,7 @@ export default function BookScreen() {
       const payment = await api.post('/payments/intent', {
         familyId: user.familyId, amount: selected.price, currency: selected.currency, type: 'one_time', bookingId: booking.id,
       });
-      setStatus(`Booked ${selected.name} for ${selected.currency} ${selected.price}. Payment ${payment.status}.`);
+      setStatus(`✓ Booked ${selected.name} for ${selected.currency} ${selected.price}.`);
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     }
@@ -35,21 +45,28 @@ export default function BookScreen() {
 
   return (
     <ScrollView contentContainerStyle={s.content}>
-      <Text style={s.title}>Book a service</Text>
+      <ScreenTitle>Book a service</ScreenTitle>
       <View style={s.grid}>
-        {catalog.map((service) => (
-          <TouchableOpacity
-            key={service.id}
-            style={[s.tile, selected?.id === service.id && s.tileActive]}
-            onPress={() => setSelected(service)}
-          >
-            <Text style={s.tileName}>{service.name}</Text>
-            <Text style={s.tilePrice}>{service.currency} {service.price}</Text>
-          </TouchableOpacity>
-        ))}
+        {catalog.map((service) => {
+          const active = selected?.id === service.id;
+          return (
+            <TouchableOpacity
+              key={service.id}
+              style={[s.tile, active && s.tileActive]}
+              onPress={() => setSelected(service)}
+              activeOpacity={0.7}
+            >
+              <View style={[s.iconCircle, active && { backgroundColor: colors.accent }]}>
+                <Ionicons name={ICONS[service.id] || 'ellipse-outline'} size={18} color={active ? colors.white : colors.accent} />
+              </View>
+              <Text style={s.tileName}>{service.name}</Text>
+              <Text style={s.tilePrice}>{service.currency} {service.price}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
       <Card>
-        <CardTitle>Confirm booking</CardTitle>
+        <CardTitle icon="checkmark-done-outline">Confirm booking</CardTitle>
         <Button onPress={book} disabled={!selected}>Book & pay (mock)</Button>
         {status ? <Text style={s.status}>{status}</Text> : null}
       </Card>
@@ -58,12 +75,12 @@ export default function BookScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { padding: 18 },
-  title: { fontSize: 22, fontWeight: '800', color: colors.stone800, marginBottom: 16 },
+  content: { padding: 18, paddingTop: 60, paddingBottom: 40 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  tile: { width: '47%', borderWidth: 2, borderColor: colors.stone100, borderRadius: 16, padding: 14, backgroundColor: colors.white },
-  tileActive: { borderColor: colors.brand500, backgroundColor: colors.brand50 },
-  tileName: { fontSize: 14, fontWeight: '600', color: colors.stone800, marginBottom: 4 },
-  tilePrice: { fontSize: 12, color: colors.stone400 },
-  status: { marginTop: 10, color: colors.stone600, fontSize: 13 },
+  tile: { width: '47%', borderRadius: radius.card, padding: 14, backgroundColor: colors.surface, ...shadow },
+  tileActive: { backgroundColor: colors.accentSoft },
+  iconCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  tileName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 4 },
+  tilePrice: { fontSize: 12, color: colors.textTertiary },
+  status: { marginTop: 10, color: colors.accentDark, fontSize: 13 },
 });

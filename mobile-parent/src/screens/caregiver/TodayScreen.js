@@ -1,25 +1,28 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Card, CardTitle, Badge, Button, ErrorBox } from '../../components/ui';
+import { Card, CardTitle, Badge, Button, ErrorBox, EmptyState, ScreenTitle } from '../../components/ui';
 import { colors } from '../../theme';
 
-const STATUS_VARIANT = { scheduled: 'neutral', in_progress: 'warning', completed: 'success' };
+const STATUS_VARIANT = { scheduled: 'neutral', in_progress: 'warning' };
 
-export default function FieldAppScreen() {
+export default function TodayScreen() {
   const { user, logout } = useAuth();
   const [visits, setVisits] = useState([]);
   const [medsByParent, setMedsByParent] = useState({});
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   function refresh() {
     api.get(`/visits?caregiverId=${user.id}`).then((vs) => {
-      setVisits(vs);
-      const parentIds = [...new Set(vs.filter((v) => v.status === 'in_progress').map((v) => v.parentId))];
+      const active = vs.filter((v) => v.status !== 'completed');
+      setVisits(active);
+      const parentIds = [...new Set(active.filter((v) => v.status === 'in_progress').map((v) => v.parentId))];
       parentIds.forEach((pid) => {
         api.get(`/parents/${pid}/medications`).then((meds) => setMedsByParent((m) => ({ ...m, [pid]: meds.filter((med) => med.status === 'pending' || med.status === 'due') })));
       });
@@ -28,7 +31,12 @@ export default function FieldAppScreen() {
 
   useEffect(() => { refresh(); }, [user]);
 
-  // Real GPS — no simulated coordinates, unlike the web caregiver app.
+  async function onRefresh() {
+    setRefreshing(true);
+    refresh();
+    setRefreshing(false);
+  }
+
   async function getRealGeo() {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') throw new Error('Location permission is required to check in.');
@@ -89,14 +97,16 @@ export default function FieldAppScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={s.content}>
+    <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       <View style={s.headRow}>
-        <Text style={s.title}>My visits</Text>
+        <ScreenTitle>Today</ScreenTitle>
         <Text onPress={logout} style={s.logout}>Log out</Text>
       </View>
       <ErrorBox>{error}</ErrorBox>
 
-      {visits.map((v) => {
+      {visits.length === 0 ? (
+        <Card><EmptyState icon="calendar-outline" text="No active visits right now." /></Card>
+      ) : visits.map((v) => {
         const checklist = JSON.parse(v.taskChecklistJson || '[]');
         const meds = medsByParent[v.parentId] || [];
         return (
@@ -105,20 +115,28 @@ export default function FieldAppScreen() {
               <CardTitle>{v.type} — {v.parent.user.name}</CardTitle>
               <Badge variant={STATUS_VARIANT[v.status]}>{v.status.replace('_', ' ')}</Badge>
             </View>
-            <Text style={s.address}>{v.parent.address}</Text>
+            <View style={s.addressRow}>
+              <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+              <Text style={s.address}>{v.parent.address}</Text>
+            </View>
 
             {v.status === 'scheduled' && (
-              <Button onPress={() => checkIn(v.id)} loading={busyId === v.id}>Check in (uses real GPS)</Button>
+              <Button onPress={() => checkIn(v.id)} loading={busyId === v.id} icon="navigate-outline">Check in (GPS)</Button>
             )}
 
             {v.status === 'in_progress' && (
               <View>
-                <Button variant="outline" onPress={() => uploadProof(v.id)} loading={busyId === v.id} style={{ marginBottom: 10 }}>
-                  📷 Take proof photo
+                <Button variant="outline" onPress={() => uploadProof(v.id)} loading={busyId === v.id} icon="camera-outline" style={{ marginBottom: 10 }}>
+                  Take proof photo
                 </Button>
                 {v.proofs?.length > 0 && <Text style={s.muted}>{v.proofs.length} photo(s) uploaded</Text>}
 
-                {checklist.map((c, i) => <Text key={i} style={s.checklistItem}>• {c.task}</Text>)}
+                {checklist.map((c, i) => (
+                  <View key={i} style={s.checkRow}>
+                    <Ionicons name="ellipse-outline" size={14} color={colors.textTertiary} />
+                    <Text style={s.checklistItem}>{c.task}</Text>
+                  </View>
+                ))}
 
                 {meds.length > 0 && (
                   <View style={s.medBox}>
@@ -135,16 +153,10 @@ export default function FieldAppScreen() {
                   </View>
                 )}
 
-                <Button onPress={() => checkOut(v.id, checklist)} loading={busyId === v.id} style={{ marginTop: 10 }}>
-                  Complete checklist & check out
+                <Button onPress={() => checkOut(v.id, checklist)} loading={busyId === v.id} icon="checkmark-circle-outline" style={{ marginTop: 10 }}>
+                  Complete & check out
                 </Button>
               </View>
-            )}
-
-            {v.status === 'completed' && (
-              <Text style={{ color: v.geoVerified ? colors.brand700 : colors.warm600, fontWeight: '700' }}>
-                {v.geoVerified ? '✅ Geo-verified' : '⚠️ Not geo-verified — flagged'}
-              </Text>
             )}
           </Card>
         );
@@ -154,15 +166,16 @@ export default function FieldAppScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { padding: 18, paddingTop: 54, paddingBottom: 40 },
-  headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  title: { fontSize: 22, fontWeight: '800', color: colors.brand700 },
-  logout: { color: colors.stone500, fontSize: 13 },
-  address: { color: colors.stone400, fontSize: 13, marginBottom: 10 },
-  muted: { color: colors.stone400, fontSize: 12, marginBottom: 8 },
-  checklistItem: { fontSize: 14, color: colors.stone700, marginBottom: 4 },
-  medBox: { borderWidth: 1, borderColor: colors.stone100, borderRadius: 12, padding: 10, marginVertical: 10 },
-  medBoxTitle: { fontSize: 12, fontWeight: '700', color: colors.stone600, marginBottom: 6 },
+  content: { padding: 18, paddingTop: 60, paddingBottom: 40 },
+  headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  logout: { color: colors.textTertiary, fontSize: 13 },
+  addressRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 12 },
+  address: { color: colors.textTertiary, fontSize: 13 },
+  muted: { color: colors.textTertiary, fontSize: 12, marginBottom: 8 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 },
+  checklistItem: { fontSize: 14, color: colors.textSecondary },
+  medBox: { backgroundColor: colors.surfaceAlt, borderRadius: 14, padding: 12, marginVertical: 10 },
+  medBoxTitle: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 8, textTransform: 'uppercase' },
   medRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  rowText: { fontSize: 14, color: colors.stone700 },
+  rowText: { fontSize: 14, color: colors.textPrimary },
 });

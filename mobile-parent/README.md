@@ -15,18 +15,26 @@ app has. Once we were building native anyway, "all roles, same as the website" w
 next step. Functionally near-parity with the website; a few things are intentionally simplified
 (see "Known gaps" below).
 
+## Design
+
+Clean-minimal style (Apple Health-inspired): light-gray/white surfaces, one accent color (the
+brand green), generous corner radius, soft shadows instead of borders, icons throughout
+(`@expo/vector-icons`). Every role except Parent (which only has one real screen) gets a bottom
+tab bar instead of one long scrolling page — each tab is a focused, single-purpose screen instead
+of a dense form-and-list dump.
+
 ## What's in here, per role
 
-- **Parent**: real OS-scheduled medication alarms (fire even with the app closed/phone locked),
-  SOS, visit confirmation, voice announcements (`expo-speech`).
-- **Buyer**: dashboard (visits, vitals, alerts, care plan), visit detail with proof artifacts, SOS,
-  book a service + mock payment, billing/subscription, Care Manager chat.
-- **Care Manager**: alert queue, family roster, chat, recurring medication reminder setup, visit
-  scheduling.
-- **Caregiver**: visit list, check-in/out using **real device GPS** (`expo-location` — more
-  accurate than the website's simulated-coordinates version), **real camera capture**
-  (`expo-image-picker`) for proof photos, medication marking.
-- **Admin**: caregiver verification + city coverage, live SLA dashboard, audit log.
+- **Parent** (single screen, no tabs needed): real OS-scheduled medication alarms (fire even with
+  the app closed/phone locked), SOS, visit confirmation, voice announcements (`expo-speech`).
+- **Buyer** — tabs: *Home* (dashboard → visit detail), *Book*, *Billing*, *Chat*, *SOS*.
+- **Care Manager** — tabs: *Alerts*, *Families*, *Schedule* (medication reminders + visits),
+  *Chat*.
+- **Caregiver** — tabs: *Today* (active visits — check-in/out with **real device GPS** via
+  `expo-location`, **real camera capture** via `expo-image-picker` for proof photos, medication
+  marking), *History* (completed visits).
+- **Admin** — tabs: *Overview* (SLA dashboard), *Caregivers* (verification + city coverage),
+  *Audit* (event log).
 
 ## Setup
 

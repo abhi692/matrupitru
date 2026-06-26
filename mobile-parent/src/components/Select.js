@@ -1,6 +1,6 @@
 import { View, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { colors } from '../theme';
+import { colors, radius } from '../theme';
 
 export default function Select({ value, onValueChange, items, placeholder = 'Select...' }) {
   return (
@@ -16,6 +16,6 @@ export default function Select({ value, onValueChange, items, placeholder = 'Sel
 }
 
 const s = StyleSheet.create({
-  wrap: { borderWidth: 1, borderColor: colors.stone200, borderRadius: 10, marginBottom: 4, backgroundColor: colors.white, overflow: 'hidden' },
+  wrap: { backgroundColor: colors.surfaceAlt, borderRadius: radius.control, marginBottom: 4, overflow: 'hidden' },
   picker: { height: 50 },
 });

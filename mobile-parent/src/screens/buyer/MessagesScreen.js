@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Card, CardTitle, CardDescription } from '../../components/ui';
+import { Card, CardTitle, CardDescription, ScreenTitle } from '../../components/ui';
 import ChatPanel from '../../components/ChatPanel';
 
 export default function MessagesScreen() {
@@ -16,8 +16,9 @@ export default function MessagesScreen() {
 
   return (
     <ScrollView contentContainerStyle={s.content}>
+      <ScreenTitle>Messages</ScreenTitle>
       <Card>
-        <CardTitle>Care Manager</CardTitle>
+        <CardTitle icon="chatbubble-ellipses-outline">Care Manager</CardTitle>
         <CardDescription>For non-urgent questions — use SOS for emergencies.</CardDescription>
         <ChatPanel threadId={threadId} />
       </Card>
@@ -26,5 +27,5 @@ export default function MessagesScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { padding: 18 },
+  content: { padding: 18, paddingTop: 60, paddingBottom: 40 },
 });
