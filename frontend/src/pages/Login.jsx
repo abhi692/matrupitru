@@ -190,6 +190,10 @@ export default function Login() {
             ))}
           </div>
         </div>
+
+        <p className="text-xs text-stone-400 text-center mt-8">
+          <Link to="/privacy" className="hover:text-stone-600 hover:underline">Privacy Policy</Link>
+        </p>
       </div>
     </div>
   );

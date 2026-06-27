@@ -8,6 +8,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.matrupitru.app",
+      "buildNumber": "1",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
@@ -17,6 +19,8 @@
       }
     },
     "android": {
+      "package": "com.matrupitru.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -35,6 +39,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#f2f2f7"
+        }
+      ],
       [
         "expo-notifications",
         {

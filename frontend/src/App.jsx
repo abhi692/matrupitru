@@ -5,6 +5,7 @@ import RequireRole from './components/RequireRole';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Privacy from './pages/Privacy';
 import Onboarding from './pages/buyer/Onboarding';
 import Dashboard from './pages/buyer/Dashboard';
 import VisitDetail from './pages/buyer/VisitDetail';
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/privacy" element={<Privacy />} />
 
               <Route path="/buyer" element={<RequireRole role="buyer"><Dashboard /></RequireRole>} />
               <Route path="/buyer/onboarding" element={<RequireRole role="buyer"><Onboarding /></RequireRole>} />
