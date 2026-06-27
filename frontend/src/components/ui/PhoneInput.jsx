@@ -19,7 +19,8 @@ export function PhoneInput({ value, onChange, className, id, ...props }) {
         className
       )}
     >
-      <span className="flex items-center px-3 text-sm font-medium text-stone-500 border-r border-stone-200 bg-stone-50 rounded-l-control select-none">
+      <span className="flex items-center gap-1.5 px-3 text-sm font-semibold text-stone-700 border-r border-stone-200 bg-stone-100 rounded-l-control select-none">
+        <span className="text-base leading-none">🇮🇳</span>
         +91
       </span>
       <input

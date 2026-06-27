@@ -15,7 +15,10 @@ export default function PhoneInput({ value, onChange, style }) {
 
   return (
     <View style={[s.wrap, style]}>
-      <Text style={s.prefix}>+91</Text>
+      <View style={s.prefixWrap}>
+        <Text style={s.flag}>🇮🇳</Text>
+        <Text style={s.prefix}>+91</Text>
+      </View>
       <TextInput
         style={s.input}
         value={digits}
@@ -34,7 +37,13 @@ export function isValidIndianPhone(value) {
 }
 
 const s = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceAlt, borderRadius: radius.control, marginBottom: 4 },
-  prefix: { paddingLeft: 14, paddingRight: 8, fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  input: { flex: 1, paddingVertical: 13, paddingRight: 14, fontSize: 15, color: colors.textPrimary },
+  wrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceAlt, borderRadius: radius.control, marginBottom: 4, overflow: 'hidden' },
+  prefixWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingLeft: 14, paddingRight: 12, paddingVertical: 13,
+    backgroundColor: colors.separator, borderRightWidth: 1, borderRightColor: colors.separator,
+  },
+  flag: { fontSize: 16, lineHeight: 18 },
+  prefix: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  input: { flex: 1, paddingVertical: 13, paddingHorizontal: 14, fontSize: 15, color: colors.textPrimary },
 });
