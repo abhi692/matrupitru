@@ -77,9 +77,13 @@ notifications (a Google/Apple policy change, not a bug in this app) and prints a
 on startup. This project only uses *local* scheduled notifications (`scheduleNotificationAsync`) for
 the medication alarm itself — a different code path that fires fine in Expo Go. The one place that
 genuinely needs remote push is `getExpoPushToken()` in `src/lib/notifications.js` (used to register
-this device for instant SOS/alert/reminder pushes from the backend); it now detects Expo Go
-(`Constants.appOwnership === 'expo'`) and skips itself there instead of logging the error on every
-login — push registration silently no-ops in Expo Go and works normally in a real dev/EAS build.
+this device for instant SOS/alert/reminder pushes from the backend); it now detects Expo Go with
+`isRunningInExpoGo()` from the `expo` package and skips itself there instead of logging the error on
+every login — push registration silently no-ops in Expo Go and works normally in a real dev/EAS
+build. (An earlier version of this check used `Constants.appOwnership`/`executionEnvironment` from
+`expo-constants`, which turned out to be unreliable on SDK 54 — `isRunningInExpoGo()` is the exact
+function `expo-notifications` uses internally to decide whether to print the warning in the first
+place, so it's guaranteed to agree with it.)
 
 **Dropdowns (Select component)**: the original implementation used the native
 `@react-native-picker/picker` widget, which has long-standing rendering bugs in Expo Go on Android —

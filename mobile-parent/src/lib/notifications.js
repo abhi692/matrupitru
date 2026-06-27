@@ -1,14 +1,22 @@
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
+import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 
 // Expo Go removed remote-push support entirely (Android in SDK 53, iOS earlier) —
 // calling getExpoPushTokenAsync() there logs a scary red ERROR to the console
 // every time, regardless of try/catch (it's a console.error inside the library,
-// not a thrown exception). Skipping it in Expo Go avoids the noise; it still
-// works normally in a real dev/production build. Local scheduled notifications
-// (the actual medication-alarm mechanism) are a separate API and unaffected.
-const isExpoGo = Constants.appOwnership === 'expo';
+// not a thrown exception, because expo-notifications itself calls console.error
+// internally before the promise even rejects). Skipping it in Expo Go avoids
+// the noise; it still works normally in a real dev/production build. Local
+// scheduled notifications (the actual medication-alarm mechanism) are a
+// separate API and unaffected.
+//
+// Using expo's own isRunningInExpoGo() instead of Constants.appOwnership /
+// executionEnvironment — those came back unreliable (silently falsy even
+// inside actual Expo Go on SDK 54), while this is the exact same detection
+// expo-notifications uses internally to decide whether to print the warning,
+// so it's guaranteed to agree with it.
+const isExpoGo = isRunningInExpoGo();
 
 // This is the actual fix for the thing the web app couldn't do: these are real
 // OS-scheduled notifications. They fire at the right time whether the app is
