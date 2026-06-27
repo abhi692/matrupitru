@@ -65,6 +65,12 @@ export async function scheduleAllReminders(schedules) {
     const times = JSON.parse(schedule.timesOfDayJson || '[]');
     for (const t of times) {
       const [hour, minute] = t.split(':').map(Number);
+      // DAILY, not CALENDAR — CALENDAR triggers aren't supported by the native
+      // Android module in this expo-notifications version ("Trigger of type:
+      // calendar is not supported on Android") and are finicky enough on iOS
+      // (partial date-component matching) that they were silently never
+      // firing there either. DAILY does exactly what we need — fire every
+      // day at this hour:minute — and is properly supported on both platforms.
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Time for your medicine',
@@ -73,10 +79,9 @@ export async function scheduleAllReminders(schedules) {
           data: { medication: schedule.medication, scheduleId: schedule.id },
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour,
           minute,
-          repeats: true,
           channelId: 'medication-alarms',
         },
       });

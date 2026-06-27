@@ -121,6 +121,15 @@ cause `Unable to resolve module` errors that look like real bugs but are just an
 
 The login screen has tap-to-fill demo account cards, same as the website.
 
+**Medication alarm trigger type**: `src/lib/notifications.js` schedules with
+`SchedulableTriggerInputTypes.DAILY` (fire every day at this hour:minute), not `CALENDAR`. An
+earlier version used `CALENDAR`, which threw `"Trigger of type: calendar is not supported on
+Android"` on real Android devices (the native Android module in this expo-notifications version
+doesn't implement it) and was also silently never firing on iOS, where calendar triggers' partial
+date-component matching is finicky. `DAILY` is the purpose-built trigger for exactly this use case
+and is documented as supported on both platforms — fixed after reproducing the Android crash on a
+real device; re-test on both platforms to confirm the alarm actually rings at the scheduled time.
+
 ## Testing the medication alarm (the headline feature)
 
 1. Log in as **Care Manager**, set up a medication schedule for 1-2 minutes out.
