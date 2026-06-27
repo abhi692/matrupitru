@@ -1,10 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ensureNotificationPermissions, setupAndroidChannel } from './src/lib/notifications';
+
+// Two screens, no auth, no deep links between them — a local toggle is
+// simpler and avoids nesting a second NavigationContainer just for this.
+function AuthFlow() {
+  const [mode, setMode] = useState('login');
+  return mode === 'login'
+    ? <LoginScreen onSwitchToRegister={() => setMode('register')} />
+    : <RegisterScreen onSwitchToLogin={() => setMode('login')} />;
+}
 
 function Root() {
   const { user, loading } = useAuth();
@@ -22,7 +32,7 @@ function Root() {
     );
   }
 
-  return user ? <AppNavigator /> : <LoginScreen />;
+  return user ? <AppNavigator /> : <AuthFlow />;
 }
 
 export default function App() {

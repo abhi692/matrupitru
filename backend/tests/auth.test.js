@@ -44,3 +44,26 @@ test('/v1/me returns the authenticated user', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.phone, phone);
 });
+
+test('public self-signup always creates a buyer, ignoring any role in the body', async () => {
+  const phone = '+19990000005';
+  const reg = await request(app).post('/v1/auth/register').send({
+    name: 'Sneaky Admin', phone, password: 'password123', role: 'admin',
+  });
+  assert.equal(reg.status, 201);
+  assert.equal(reg.body.user.role, 'buyer');
+});
+
+test('registration rejects a password shorter than 8 characters', async () => {
+  const res = await request(app).post('/v1/auth/register').send({
+    name: 'Short Pass', phone: '+19990000006', password: 'short',
+  });
+  assert.equal(res.status, 400);
+});
+
+test('registration rejects a malformed phone number', async () => {
+  const res = await request(app).post('/v1/auth/register').send({
+    name: 'Bad Phone', phone: 'not-a-phone', password: 'password123',
+  });
+  assert.equal(res.status, 400);
+});

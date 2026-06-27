@@ -4,26 +4,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius, shadow } from '../theme';
 
-const DEMO_ACCOUNTS = [
-  { label: 'Buyer', name: 'Anjali Rao', phone: '+12065550100' },
-  { label: 'Parent', name: 'Lakshmi Rao', phone: '+919900000003' },
-  { label: 'Care Manager', name: 'Ravi Kumar', phone: '+919900000001' },
-  { label: 'Caregiver', name: 'Ramesh Naik', phone: '+919900000002' },
-  { label: 'Admin', name: 'Priya Sharma', phone: '+919900000099' },
-];
-
-export default function LoginScreen({ onSwitchToRegister }) {
-  const { login } = useAuth();
+// Public self-signup — always creates a buyer account (the backend enforces
+// this; see backend/src/modules/identity/routes.js). Other roles (parent,
+// caregiver, care manager, admin) are still provisioned internally.
+export default function RegisterScreen({ onSwitchToLogin }) {
+  const { register } = useAuth();
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function onSubmit() {
     setError('');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     setLoading(true);
     try {
-      await login(phone, password);
+      await register({ name, phone, password });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -36,14 +37,18 @@ export default function LoginScreen({ onSwitchToRegister }) {
       <View style={styles.logoCircle}>
         <Ionicons name="heart" size={28} color={colors.white} />
       </View>
-      <Text style={styles.logo}>MatruPitru</Text>
-      <Text style={styles.subtitle}>Care your parents accept, visibility you can trust.</Text>
+      <Text style={styles.logo}>Create your account</Text>
+      <Text style={styles.subtitle}>Set up MatruPitru to coordinate care for your parent.</Text>
 
       <View style={styles.card}>
+        <Text style={styles.label}>Your name</Text>
+        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Anjali Rao" placeholderTextColor={colors.textTertiary} />
         <Text style={styles.label}>Phone</Text>
-        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+91..." placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" />
+        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+919900000000" placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" />
         <Text style={styles.label}>Password</Text>
-        <TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor={colors.textTertiary} />
+        <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="At least 8 characters" placeholderTextColor={colors.textTertiary} secureTextEntry />
+        <Text style={styles.label}>Confirm password</Text>
+        <TextInput style={styles.input} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry placeholderTextColor={colors.textTertiary} />
 
         {error ? (
           <View style={styles.errorBox}>
@@ -53,23 +58,13 @@ export default function LoginScreen({ onSwitchToRegister }) {
         ) : null}
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={loading} activeOpacity={0.8}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Log in</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create account</Text>}
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={onSwitchToRegister} style={{ marginTop: 20 }}>
-        <Text style={styles.switchText}>New here? <Text style={styles.switchLink}>Create an account</Text></Text>
+      <TouchableOpacity onPress={onSwitchToLogin} style={{ marginTop: 20 }}>
+        <Text style={styles.switchText}>Already have an account? <Text style={styles.switchLink}>Log in</Text></Text>
       </TouchableOpacity>
-
-      <Text style={styles.demoHeading}>Demo accounts · password123</Text>
-      <View style={styles.demoGrid}>
-        {DEMO_ACCOUNTS.map((a) => (
-          <TouchableOpacity key={a.phone} style={styles.demoCard} onPress={() => setPhone(a.phone)} activeOpacity={0.7}>
-            <Text style={styles.demoLabel}>{a.label}</Text>
-            <Text style={styles.demoName}>{a.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
     </ScrollView>
   );
 }
@@ -77,7 +72,7 @@ export default function LoginScreen({ onSwitchToRegister }) {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.bg, justifyContent: 'center', padding: 24, paddingTop: 80 },
   logoCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  logo: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' },
+  logo: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' },
   subtitle: { color: colors.textSecondary, textAlign: 'center', marginTop: 6, marginBottom: 28, fontSize: 14 },
   card: { backgroundColor: colors.surface, borderRadius: radius.card, padding: 20, ...shadow },
   label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 6, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.3 },
@@ -88,9 +83,4 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, flex: 1 },
   switchText: { textAlign: 'center', color: colors.textSecondary, fontSize: 14 },
   switchLink: { color: colors.accent, fontWeight: '700' },
-  demoHeading: { textAlign: 'center', color: colors.textTertiary, fontSize: 12, fontWeight: '600', marginTop: 28, marginBottom: 10 },
-  demoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
-  demoCard: { width: '46%', backgroundColor: colors.surface, borderRadius: radius.control, padding: 13, ...shadow },
-  demoLabel: { fontSize: 13, fontWeight: '700', color: colors.accentDark },
-  demoName: { fontSize: 12, color: colors.textSecondary },
 });

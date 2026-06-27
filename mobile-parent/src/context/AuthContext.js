@@ -45,13 +45,23 @@ export function AuthProvider({ children }) {
     return data.user;
   }
 
+  // Public self-signup — always creates a buyer account (the backend enforces
+  // this regardless of what's sent here; see backend/src/modules/identity/routes.js).
+  async function register({ name, phone, password }) {
+    const data = await api.post('/auth/register', { name, phone, password });
+    await setToken(data.token);
+    setUser(data.user);
+    registerPushToken();
+    return data.user;
+  }
+
   async function logout() {
     await setToken(null);
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );

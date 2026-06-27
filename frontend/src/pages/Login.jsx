@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { HeartHandshake, AlertCircle } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -65,6 +65,11 @@ export default function Login() {
             </Button>
           </form>
         </div>
+
+        <p className="text-sm text-stone-500 text-center mt-6">
+          New here?{' '}
+          <Link to="/signup" className="text-brand-600 font-medium hover:underline">Create an account</Link>
+        </p>
 
         <div className="mt-6">
           <p className="text-xs font-medium text-stone-400 uppercase tracking-wide text-center mb-3">

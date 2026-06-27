@@ -5,11 +5,24 @@ import { signToken, requireAuth } from '../../lib/auth.js';
 
 export const identityRouter = Router();
 
-// Demo-grade auth: phone + password. Real OTP/SSO is out of scope for Phase 1 local build.
+const PHONE_RE = /^\+?[0-9]{8,15}$/;
+
+// Public self-signup. Demo-grade auth (phone + password, no OTP/SSO — out of
+// scope for Phase 1) but the role is NOT trusted from the client: this is now
+// a public, unauthenticated endpoint, so a `role` field in the request body
+// could otherwise be used to mint an admin/caregiver/care_manager account.
+// Self-signup only ever creates buyers; every other role is provisioned
+// internally (seed script today, an admin-only endpoint if that's ever needed).
 identityRouter.post('/auth/register', async (req, res) => {
-  const { name, phone, password, role = 'buyer', email, locale, timezone } = req.body;
+  const { name, phone, password, email, locale, timezone } = req.body;
   if (!name || !phone || !password) {
     return res.status(400).json({ error: 'name, phone, password required' });
+  }
+  if (!PHONE_RE.test(phone)) {
+    return res.status(400).json({ error: 'Enter a valid phone number, e.g. +919900000000' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
   const existing = await prisma.user.findUnique({ where: { phone } });
   if (existing) return res.status(409).json({ error: 'Phone already registered' });
@@ -22,7 +35,7 @@ identityRouter.post('/auth/register', async (req, res) => {
 
   const user = await prisma.user.create({
     data: {
-      name, phone, email, role: pendingInvite ? 'buyer' : role, passwordHash, locale, timezone,
+      name, phone, email, role: 'buyer', passwordHash, locale, timezone,
       familyId: pendingInvite?.familyId,
     },
   });
