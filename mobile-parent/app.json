@@ -51,7 +51,10 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#1d9e75"
+          "color": "#1d9e75",
+          "sounds": [
+            "./assets/alarm.wav"
+          ]
         }
       ],
       [
@@ -66,7 +69,8 @@
           "cameraPermission": "Caregivers use the camera to capture proof-of-care photos."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-audio"
     ]
   }
 }

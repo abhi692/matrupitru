@@ -47,11 +47,31 @@ export async function setupAndroidChannel() {
   await Notifications.setNotificationChannelAsync('medication-alarms', {
     name: 'Medication alarms',
     importance: Notifications.AndroidImportance.MAX,
-    sound: 'default',
-    vibrationPattern: [0, 500, 250, 500],
+    // Custom synthesized alarm tone (assets/alarm.wav) instead of the
+    // default notification chime — registered as a system sound via the
+    // expo-notifications config plugin's `sounds` option in app.json.
+    sound: 'alarm.wav',
+    vibrationPattern: [0, 500, 250, 500, 250, 500],
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    // Ring even if the parent's phone is in Do Not Disturb — a missed
+    // medication dose is exactly the kind of thing DND shouldn't silence.
+    bypassDnd: true,
   });
 }
+
+// One real loud alarm clock (ignores the silent switch/notification volume,
+// rings continuously until dismissed, draws a full-screen UI even when
+// locked) is an OS-level capability that Expo's managed local-notification
+// API does not expose -- it needs either a custom native Android
+// AlarmManager + foreground service + full-screen intent, or, on iOS,
+// Apple's "Critical Alerts" entitlement, which Apple only grants to a
+// narrow set of apps (mostly safety/health) after a manual application —
+// neither is achievable from JS/config alone. What follows is the closest
+// practical approximation within that ceiling: a custom loud tone, max
+// priority + DND bypass, a time-sensitive iOS delivery level, and a second
+// "didn't take it yet?" nudge a few minutes later in case the first one is
+// missed (silenced phone, parent didn't hear it, etc.).
+const NAG_DELAY_MINUTES = 4;
 
 // Cancels everything and reschedules from the current set of active schedules.
 // Called on login and whenever the app comes to the foreground, so changes
@@ -65,6 +85,7 @@ export async function scheduleAllReminders(schedules) {
     const times = JSON.parse(schedule.timesOfDayJson || '[]');
     for (const t of times) {
       const [hour, minute] = t.split(':').map(Number);
+
       // DAILY, not CALENDAR — CALENDAR triggers aren't supported by the native
       // Android module in this expo-notifications version ("Trigger of type:
       // calendar is not supported on Android") and are finicky enough on iOS
@@ -75,13 +96,37 @@ export async function scheduleAllReminders(schedules) {
         content: {
           title: 'Time for your medicine',
           body: schedule.medication,
-          sound: true,
+          sound: 'alarm.wav',
+          interruptionLevel: 'timeSensitive',
           data: { medication: schedule.medication, scheduleId: schedule.id },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour,
           minute,
+          channelId: 'medication-alarms',
+        },
+      });
+
+      // Backup nudge a few minutes later. DAILY triggers don't support a
+      // one-off "fire once and stop" with minute-level offsets across an
+      // hour boundary cleanly, so this computes the rolled-over hour/minute
+      // by hand.
+      const nagTotal = hour * 60 + minute + NAG_DELAY_MINUTES;
+      const nagHour = Math.floor(nagTotal / 60) % 24;
+      const nagMinute = nagTotal % 60;
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Still time for your medicine',
+          body: `Don't forget: ${schedule.medication}`,
+          sound: 'alarm.wav',
+          interruptionLevel: 'timeSensitive',
+          data: { medication: schedule.medication, scheduleId: schedule.id, nag: true },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: nagHour,
+          minute: nagMinute,
           channelId: 'medication-alarms',
         },
       });

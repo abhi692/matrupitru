@@ -130,6 +130,32 @@ date-component matching is finicky. `DAILY` is the purpose-built trigger for exa
 and is documented as supported on both platforms — fixed after reproducing the Android crash on a
 real device; re-test on both platforms to confirm the alarm actually rings at the scheduled time.
 
+**Making the alarm actually loud, and not dependent on a manual refresh**: two follow-up fixes.
+
+1. The in-app alarm card + voice announcement previously only updated on a manual pull-to-refresh
+   or when the app came back to the foreground — not something to expect an elderly parent to
+   remember to do every few minutes. `HomeScreen.js` now polls every 15s while the screen is open.
+2. "Soft voice, said once" — `expo-speech` alone isn't an alarm. Three changes:
+   - `assets/alarm.wav` is a synthesized (not downloaded — generated programmatically with a Node
+     script, a sharp 3-beep pattern repeated for ~2.5s) loud tone, registered as a custom
+     notification sound via the `expo-notifications` config plugin's `sounds` option, and set as
+     the Android channel's default sound with `bypassDnd: true` (rings through Do Not Disturb) and
+     `interruptionLevel: 'timeSensitive'` on iOS.
+   - A second "didn't take it yet?" notification is scheduled a few minutes after the first
+     (`NAG_DELAY_MINUTES` in `notifications.js`) in case the first one is missed.
+   - While the app is open and a dose is due, `HomeScreen.js` now also plays `alarm.wav` on a loop
+     at full volume via `expo-audio`, on top of the voice line — stops the moment it's taken or
+     auto-escalated to missed.
+
+   **The honest ceiling**: a *true* alarm-clock experience — rings at max volume ignoring the
+   silent switch, loops indefinitely until dismissed, draws a full-screen UI even when locked — is
+   an OS-level capability Expo's managed local-notification API doesn't expose. Android needs a
+   custom `AlarmManager` + foreground service + full-screen intent (native code, requires ejecting
+   from the managed workflow or a custom dev-client config plugin); iOS needs Apple's "Critical
+   Alerts" entitlement, which Apple only grants to a narrow set of qualifying apps after a manual
+   application — not something achievable from JS/config alone. What's here is the closest
+   practical approximation within that ceiling.
+
 ## Testing the medication alarm (the headline feature)
 
 1. Log in as **Care Manager**, set up a medication schedule for 1-2 minutes out.

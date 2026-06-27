@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl, AppState, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { scheduleAllReminders } from '../../lib/notifications';
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [activeCall, setActiveCall] = useState(null);
+  const alarmPlayer = useAudioPlayer(require('../../../assets/alarm.wav'));
 
   const refresh = useCallback(async () => {
     if (!user?.familyId) return;
@@ -41,7 +43,17 @@ export default function HomeScreen() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') refresh();
     });
-    return () => sub.remove();
+    // The OS-scheduled notification (lib/notifications.js) is what actually
+    // wakes the device when the app is closed. This poll is purely for the
+    // in-app experience (the big alarm card + voice announcement) while the
+    // app is open in the foreground — without it, that UI only ever updated
+    // on a manual pull-to-refresh, which isn't something you can expect an
+    // elderly parent to remember to do every few minutes.
+    const interval = setInterval(refresh, 15000);
+    return () => {
+      sub.remove();
+      clearInterval(interval);
+    };
   }, [refresh]);
 
   useEffect(() => {
@@ -57,12 +69,37 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [user]);
 
+  // Foreground alarm: plays the same loud tone bundled for the OS notification
+  // (lib/notifications.js), looped at full volume, for as long as a dose is
+  // due and the app is open — not just a single quiet voice line. Stops the
+  // moment dueMeds clears (parent tapped "I took it", or it auto-escalated
+  // to missed on the backend).
   useEffect(() => {
-    if (dueMeds.length === 0) return;
+    setAudioModeAsync({ playsInSilentMode: true });
+  }, []);
+
+  // Keyed on the due-med IDs, not the dueMeds array itself — a fresh poll
+  // every 15s creates a brand-new array even when nothing changed, and
+  // re-keying on array identity would restart the alarm tone from the
+  // beginning every 15 seconds instead of looping smoothly.
+  const dueMedsKey = dueMeds.map((m) => m.id).join(',');
+
+  useEffect(() => {
+    if (dueMeds.length === 0) {
+      alarmPlayer.pause();
+      return;
+    }
     const med = dueMeds[0];
     const SPEECH_LOCALE = { hi: 'hi-IN', kn: 'kn-IN', ta: 'ta-IN', te: 'te-IN', bn: 'bn-IN', mr: 'mr-IN' };
     Speech.speak(`Time for your medicine: ${med.medication}`, { language: SPEECH_LOCALE[user?.locale] || 'en-US' });
-  }, [dueMeds]);
+
+    alarmPlayer.loop = true;
+    alarmPlayer.volume = 1;
+    alarmPlayer.seekTo(0);
+    alarmPlayer.play();
+
+    return () => alarmPlayer.pause();
+  }, [dueMedsKey]);
 
   async function onRefresh() {
     setRefreshing(true);
