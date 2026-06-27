@@ -4,14 +4,21 @@ import { api } from '../../api/client';
 import { Card, CardTitle, Button, Input, Label, ErrorBox, ScreenTitle } from '../../components/ui';
 import Select from '../../components/Select';
 import TimeListPicker from '../../components/TimeListPicker';
+import DateTimeField from '../../components/DateTimeField';
 import { colors } from '../../theme';
+
+function defaultVisitTime() {
+  const d = new Date(Date.now() + 60 * 60 * 1000);
+  d.setSeconds(0, 0);
+  return d;
+}
 
 export default function ScheduleScreen() {
   const [families, setFamilies] = useState([]);
   const [caregivers, setCaregivers] = useState([]);
   const [error, setError] = useState('');
 
-  const [visitForm, setVisitForm] = useState({ parentId: '', caregiverId: '', type: 'attendant' });
+  const [visitForm, setVisitForm] = useState({ parentId: '', caregiverId: '', type: 'attendant', scheduledAt: defaultVisitTime() });
   const [visitStatus, setVisitStatus] = useState('');
   const [medForm, setMedForm] = useState({ parentId: '', medication: '', timesOfDay: ['08:00'] });
   const [medStatus, setMedStatus] = useState('');
@@ -32,10 +39,10 @@ export default function ScheduleScreen() {
         parentId: visitForm.parentId,
         caregiverId: visitForm.caregiverId || undefined,
         type: visitForm.type,
-        scheduledAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        scheduledAt: visitForm.scheduledAt.toISOString(),
         taskChecklist: [],
       });
-      setVisitStatus('✓ Scheduled for 1 hour from now.');
+      setVisitStatus(`✓ Scheduled for ${visitForm.scheduledAt.toLocaleString()}.`);
     } catch (err) {
       setVisitStatus(`Error: ${err.message}`);
     }
@@ -83,7 +90,9 @@ export default function ScheduleScreen() {
         <Select value={visitForm.caregiverId} onValueChange={(v) => setVisitForm({ ...visitForm, caregiverId: v })} placeholder="Unassigned" items={caregivers.map((c) => ({ value: c.userId, label: c.user.name }))} />
         <Label>Visit type</Label>
         <Select value={visitForm.type} onValueChange={(v) => setVisitForm({ ...visitForm, type: v })} items={['attendant', 'nurse', 'doctor', 'physio', 'errand'].map((t) => ({ value: t, label: t }))} />
-        <Button onPress={scheduleVisit} icon="add-circle-outline" style={{ marginTop: 8 }}>Schedule (1hr from now)</Button>
+        <Label>Date &amp; time</Label>
+        <DateTimeField value={visitForm.scheduledAt} onChange={(v) => setVisitForm({ ...visitForm, scheduledAt: v })} />
+        <Button onPress={scheduleVisit} icon="add-circle-outline" style={{ marginTop: 8 }}>Schedule visit</Button>
         {visitStatus ? <Text style={s.status}>{visitStatus}</Text> : null}
       </Card>
     </ScrollView>

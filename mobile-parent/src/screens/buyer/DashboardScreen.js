@@ -47,7 +47,12 @@ export default function DashboardScreen({ navigation }) {
   if (!user?.familyId) {
     return (
       <ScrollView contentContainerStyle={s.content}>
-        <Card><EmptyState icon="person-add-outline" text="No family set up yet. Onboard a parent from the website first." /></Card>
+        <Card>
+          <EmptyState icon="person-add-outline" text="No family set up yet." />
+          <Button icon="arrow-forward-circle-outline" onPress={() => navigation.navigate('Onboarding')} style={{ marginTop: 4 }}>
+            Onboard your parent
+          </Button>
+        </Card>
       </ScrollView>
     );
   }

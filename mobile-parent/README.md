@@ -28,10 +28,12 @@ of a dense form-and-list dump.
 - **Parent** (single screen, no tabs needed): real OS-scheduled medication alarms (fire even with
   the app closed/phone locked), SOS, visit confirmation, voice announcements (`expo-speech`), and a
   "Join video call" banner that appears automatically when the buyer starts a Daily.co video session.
-- **Buyer** — tabs: *Home* (dashboard → visit detail → care timeline, start video call), *Book*,
-  *Billing*, *Chat*, *SOS*.
-- **Care Manager** — tabs: *Alerts*, *Families*, *Schedule* (medication reminders + visits),
-  *Chat*.
+- **Buyer** — tabs: *Home* (dashboard → onboard a parent if none exists yet → visit detail → care
+  timeline, start video call), *Book*, *Billing*, *Chat*, *SOS*. Onboarding is the same 5-step flow
+  as the website (consent → parent basics → health profile → emergency contact → care plan), with a
+  "Use my current location" button (`expo-location`) instead of typing lat/lng.
+- **Care Manager** — tabs: *Alerts*, *Families*, *Schedule* (medication reminders with a native
+  clock-based time picker, visits with a real date+time picker), *Chat*.
 - **Caregiver** — tabs: *Today* (active visits — check-in/out with **real device GPS** via
   `expo-location`, **real camera capture** via `expo-image-picker` for proof photos, medication
   marking), *History* (completed visits).
@@ -120,11 +122,6 @@ The login screen has tap-to-fill demo account cards, same as the website.
 
 ## Known gaps vs. the website
 
-- **Buyer onboarding isn't in the mobile app.** Onboard a parent from the website first; the
-  mobile buyer dashboard reads that data fine once it exists.
-- **Visit scheduling is simplified** to "schedule for 1 hour from now" — no date/time picker
-  dependency was added to keep this build lean. Full date/time scheduling, same as the website,
-  would need `@react-native-community/datetimepicker`.
 - **Caregiver offline queue isn't ported.** The website's caregiver app queues check-in/out in
   IndexedDB when offline; this native version doesn't have that yet (would need an AsyncStorage
   queue + `@react-native-community/netinfo`).
