@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import PhoneInput from '../components/PhoneInput';
 import { colors, radius, shadow } from '../theme';
 
+// Anjali's a US-based NRI daughter (Seattle) coordinating care for her mother
+// in Karnataka — her phone is intentionally a non-+91 number to reflect that.
+// Demo accounts log straight in on tap instead of populating the phone field,
+// so the India-only PhoneInput above never has to display a foreign number.
 const DEMO_ACCOUNTS = [
   { label: 'Buyer', name: 'Anjali Rao', phone: '+12065550100' },
   { label: 'Parent', name: 'Lakshmi Rao', phone: '+919900000003' },
@@ -66,6 +71,18 @@ export default function LoginScreen({ onSwitchToRegister }) {
     setCode('');
   }
 
+  async function quickLoginAsDemo(account) {
+    setError('');
+    setLoading(true);
+    try {
+      await login(account.phone, 'password123');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.logoCircle}>
@@ -87,7 +104,7 @@ export default function LoginScreen({ onSwitchToRegister }) {
         {mode === 'password' && (
           <>
             <Text style={styles.label}>Phone</Text>
-            <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+91..." placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" />
+            <PhoneInput value={phone} onChange={setPhone} />
             <Text style={styles.label}>Password</Text>
             <TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor={colors.textTertiary} />
             {error ? <ErrorBox text={error} /> : null}
@@ -100,7 +117,7 @@ export default function LoginScreen({ onSwitchToRegister }) {
         {mode === 'otp' && !otpSent && (
           <>
             <Text style={styles.label}>Phone</Text>
-            <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+91..." placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" />
+            <PhoneInput value={phone} onChange={setPhone} />
             {error ? <ErrorBox text={error} /> : null}
             <TouchableOpacity style={styles.button} onPress={onRequestOtp} disabled={loading} activeOpacity={0.8}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send code</Text>}
@@ -131,10 +148,10 @@ export default function LoginScreen({ onSwitchToRegister }) {
         <Text style={styles.switchText}>New here? <Text style={styles.switchLink}>Create an account</Text></Text>
       </TouchableOpacity>
 
-      <Text style={styles.demoHeading}>Demo accounts · password123</Text>
+      <Text style={styles.demoHeading}>Demo accounts · tap to log in instantly</Text>
       <View style={styles.demoGrid}>
         {DEMO_ACCOUNTS.map((a) => (
-          <TouchableOpacity key={a.phone} style={styles.demoCard} onPress={() => setPhone(a.phone)} activeOpacity={0.7}>
+          <TouchableOpacity key={a.phone} style={styles.demoCard} onPress={() => quickLoginAsDemo(a)} activeOpacity={0.7}>
             <Text style={styles.demoLabel}>{a.label}</Text>
             <Text style={styles.demoName}>{a.name}</Text>
           </TouchableOpacity>

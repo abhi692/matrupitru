@@ -4,7 +4,12 @@ import { HeartHandshake, AlertCircle, MessageSquareText } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input, Label } from '../components/ui/Input';
+import { PhoneInput } from '../components/ui/PhoneInput';
 
+// Anjali's a US-based NRI daughter (Seattle) coordinating care for her mother
+// in Karnataka — her phone is intentionally a non-+91 number to reflect that.
+// Demo accounts log straight in on tap instead of populating the phone field,
+// so the India-only PhoneInput above never has to display a foreign number.
 const DEMO_ACCOUNTS = [
   { label: 'Buyer', name: 'Anjali Rao', phone: '+12065550100' },
   { label: 'Parent', name: 'Lakshmi Rao', phone: '+919900000003' },
@@ -70,6 +75,16 @@ export default function Login() {
     setCode('');
   }
 
+  async function quickLoginAsDemo(account) {
+    setError('');
+    try {
+      const user = await login(account.phone, 'password123');
+      navigate(`/${user.role}`);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-brand-50 via-cream-100 to-cream-100 px-4 py-12">
       <div className="w-full max-w-md">
@@ -105,7 +120,7 @@ export default function Login() {
             <form onSubmit={onPasswordSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91..." />
+                <PhoneInput id="phone" value={phone} onChange={setPhone} />
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
@@ -122,7 +137,7 @@ export default function Login() {
             <form onSubmit={onRequestOtp} className="space-y-4">
               <div>
                 <Label htmlFor="otpPhone">Phone</Label>
-                <Input id="otpPhone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91..." />
+                <PhoneInput id="otpPhone" value={phone} onChange={setPhone} />
               </div>
               {error && <ErrorNote>{error}</ErrorNote>}
               <Button type="submit" className="w-full" size="lg" disabled={submitting}>
@@ -159,14 +174,14 @@ export default function Login() {
 
         <div className="mt-6">
           <p className="text-xs font-medium text-stone-400 uppercase tracking-wide text-center mb-3">
-            Demo accounts &middot; password123
+            Demo accounts &middot; tap to log in instantly
           </p>
           <div className="grid grid-cols-2 gap-2">
             {DEMO_ACCOUNTS.map((a) => (
               <button
                 key={a.phone}
                 type="button"
-                onClick={() => setPhone(a.phone)}
+                onClick={() => quickLoginAsDemo(a)}
                 className="text-left rounded-control border border-stone-200 bg-white px-3 py-2.5 hover:border-brand-300 hover:bg-brand-50/50 transition-colors"
               >
                 <div className="text-xs font-semibold text-brand-700">{a.label}</div>
