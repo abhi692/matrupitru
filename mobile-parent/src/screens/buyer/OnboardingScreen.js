@@ -6,7 +6,7 @@ import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardTitle, CardDescription, Button, Input, Label, ErrorBox } from '../../components/ui';
 import Select from '../../components/Select';
-import PhoneInput, { isValidIndianPhone } from '../../components/PhoneInput';
+import PhoneInput, { isValidPhoneNumber } from '../../components/PhoneInput';
 import { colors, radius } from '../../theme';
 
 const STEPS = ['Consent', 'Parent basics', 'Health profile', 'Emergency contact', 'Care plan'];
@@ -188,7 +188,7 @@ export default function OnboardingScreen({ navigation }) {
             <Text style={s.helper}>Used to geo-verify caregiver visits against the home address.</Text>
             <Button
               onPress={() => setStep(3)}
-              disabled={!parent.name || !isValidIndianPhone(parent.phone) || !parent.address || parent.password.length < 8 || parent.password !== parent.confirmPassword}
+              disabled={!parent.name || !isValidPhoneNumber(parent.phone) || !parent.address || parent.password.length < 8 || parent.password !== parent.confirmPassword}
               style={{ marginTop: 8 }}
             >
               Continue

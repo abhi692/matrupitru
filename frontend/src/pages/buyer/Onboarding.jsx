@@ -6,7 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { Card, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input, Label } from '../../components/ui/Input';
-import { PhoneInput, isValidIndianPhone } from '../../components/ui/PhoneInput';
+import { PhoneInput, isValidPhoneNumber } from '../../components/ui/PhoneInput';
 import { Select } from '../../components/ui/Select';
 import { cn } from '../../lib/utils';
 
@@ -203,7 +203,7 @@ export default function Onboarding() {
               onClick={() => setStep(3)}
               size="lg"
               className="w-full mt-2"
-              disabled={!parent.name || !isValidIndianPhone(parent.phone) || !parent.address || parent.password.length < 8 || parent.password !== parent.confirmPassword}
+              disabled={!parent.name || !isValidPhoneNumber(parent.phone) || !parent.address || parent.password.length < 8 || parent.password !== parent.confirmPassword}
             >
               Continue
             </Button>

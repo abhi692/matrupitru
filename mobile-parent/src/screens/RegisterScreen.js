@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import PhoneInput, { isValidIndianPhone } from '../components/PhoneInput';
+import PhoneInput, { isValidPhoneNumber } from '../components/PhoneInput';
 import { colors, radius, shadow } from '../theme';
 
 // Public self-signup — always creates a buyer account (the backend enforces
@@ -19,8 +19,8 @@ export default function RegisterScreen({ onSwitchToLogin }) {
 
   async function onSubmit() {
     setError('');
-    if (!isValidIndianPhone(phone)) {
-      setError('Enter a valid 10-digit Indian mobile number.');
+    if (!isValidPhoneNumber(phone)) {
+      setError('Enter a valid phone number.');
       return;
     }
     if (password !== confirmPassword) {

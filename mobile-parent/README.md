@@ -97,6 +97,14 @@ dependency), which renders identically and reliably on every device. Same props 
 (`@react-native-community/datetimepicker`) and adds a removable chip per time, building the same
 `["HH:MM", ...]` array the backend schedule API expects.
 
+**Phone entry (`src/components/PhoneInput.js`)**: a real country-code picker (flag + dial code,
+tap to search/select from `src/components/countries.js`), not just a fixed +91 — plenty of users
+are Indian but settled abroad (NRIs), or aren't Indian at all. Defaults to India since that's this
+app's primary market. The seeded demo buyer (Anjali Rao) is intentionally a non-Indian number
+(+1, Seattle) to reflect the NRI-daughter persona; demo-account taps on the login screen log
+straight in instead of populating this field, so that one number never has to round-trip through
+the picker.
+
 If you change Metro/node_modules after the dev server is already running (e.g. installing a new
 package), restart with `npx expo start --clear` — a stale Metro cache from before the install can
 cause `Unable to resolve module` errors that look like real bugs but are just an out-of-date cache.
