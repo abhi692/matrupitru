@@ -34,7 +34,7 @@ export async function createFamilyWithParent(buyerToken) {
   const parent = await request(app)
     .post(`/v1/families/${family.body.id}/parents`)
     .set('Authorization', `Bearer ${buyerToken}`)
-    .send({ name: 'Test Parent', phone: uniquePhone('888'), address: '1 Test St', city: 'Hubli' });
+    .send({ name: 'Test Parent', phone: uniquePhone('888'), password: 'password123', address: '1 Test St', city: 'Hubli' });
   if (parent.status !== 201) throw new Error(`createParent failed: ${JSON.stringify(parent.body)}`);
 
   return { family: family.body, parent: parent.body };

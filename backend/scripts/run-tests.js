@@ -5,8 +5,20 @@ import fs from 'node:fs';
 // Tests run against a real, fresh SQLite database (not the dev one) — same
 // schema, same Prisma client code path, just disposable. Cheaper than mocking
 // the ORM and catches real query bugs the dev/seed data wouldn't surface.
-const testDbPath = path.resolve('prisma/test.db');
-if (fs.existsSync(testDbPath)) fs.rmSync(testDbPath);
+// A uniquely-named file per run instead of deleting/reusing a fixed test.db —
+// on Windows a previous (possibly still-running, e.g. backgrounded) test
+// process can hold the old file locked, and reusing it silently carries over
+// stale rows that collide with this run's fixed-phone-number test fixtures.
+const testDbPath = path.resolve(`prisma/test-${process.pid}-${Date.now()}.db`);
+
+// Best-effort cleanup of old test-*.db files from previous runs.
+try {
+  for (const f of fs.readdirSync(path.resolve('prisma'))) {
+    if (/^test-\d+-\d+\.db$/.test(f)) fs.rmSync(path.resolve('prisma', f));
+  }
+} catch {
+  // leftover locked files just accumulate harmlessly; not worth failing the run over
+}
 
 const env = {
   ...process.env,

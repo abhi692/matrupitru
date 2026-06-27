@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import PhoneInput, { isValidIndianPhone } from '../components/PhoneInput';
 import { colors, radius, shadow } from '../theme';
 
 // Public self-signup — always creates a buyer account (the backend enforces
@@ -18,6 +19,10 @@ export default function RegisterScreen({ onSwitchToLogin }) {
 
   async function onSubmit() {
     setError('');
+    if (!isValidIndianPhone(phone)) {
+      setError('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -44,7 +49,7 @@ export default function RegisterScreen({ onSwitchToLogin }) {
         <Text style={styles.label}>Your name</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Anjali Rao" placeholderTextColor={colors.textTertiary} />
         <Text style={styles.label}>Phone</Text>
-        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+919900000000" placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" />
+        <PhoneInput value={phone} onChange={setPhone} />
         <Text style={styles.label}>Password</Text>
         <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="At least 8 characters" placeholderTextColor={colors.textTertiary} secureTextEntry />
         <Text style={styles.label}>Confirm password</Text>

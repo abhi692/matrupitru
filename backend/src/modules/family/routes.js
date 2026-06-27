@@ -28,7 +28,7 @@ familyRouter.post(
   requireOwnFamily((req) => req.params.id),
   async (req, res) => {
     const {
-      name, phone, password = 'changeme123', dob, address, city, geoLat, geoLng,
+      name, phone, password, dob, address, city, geoLat, geoLng,
       languages = [], mobilityLevel, techComfort, conditions = [], allergies = [],
       medications = [], emergencyContacts = [], preferredHospital, notes, locale,
     } = req.body;
@@ -36,6 +36,15 @@ familyRouter.post(
     if (!name || !phone || !address) {
       return res.status(400).json({ error: 'name, phone, address required' });
     }
+    // No silent default password — the buyer sets it explicitly during
+    // onboarding (it used to default to a fixed 'changeme123' for every
+    // parent account, which is a real account-takeover risk). OTP login is
+    // also available, so this only has to be remembered, not typed often.
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'A password (at least 8 characters) is required for the parent account' });
+    }
+    const existingPhone = await prisma.user.findUnique({ where: { phone } });
+    if (existingPhone) return res.status(409).json({ error: 'That phone number is already registered to another account' });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const parentUser = await prisma.user.create({

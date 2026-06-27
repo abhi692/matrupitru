@@ -4,6 +4,7 @@ import { HeartHandshake, AlertCircle } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input, Label } from '../components/ui/Input';
+import { PhoneInput, isValidIndianPhone } from '../components/ui/PhoneInput';
 
 // Public self-signup — always creates a buyer account (the backend enforces
 // this too; see backend/src/modules/identity/routes.js). Parent/caregiver/
@@ -21,6 +22,10 @@ export default function Signup() {
   async function onSubmit(e) {
     e.preventDefault();
     setError('');
+    if (!isValidIndianPhone(phone)) {
+      setError('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -57,7 +62,7 @@ export default function Signup() {
             </div>
             <div>
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+919900000000" required />
+              <PhoneInput id="phone" value={phone} onChange={setPhone} />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>

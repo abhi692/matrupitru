@@ -365,3 +365,19 @@ model Event {
   payloadJson String
   createdAt DateTime @default(now())
 }
+
+// OTP login — a password-free path for an existing user (parents especially
+// don't want to remember a password). Codes are short-lived and single-use;
+// delivery goes through the same mocked SMS channel as everything else in
+// lib/notify.js (logs to console locally, swappable for a real SMS gateway
+// without touching the request/verify endpoints).
+model OtpCode {
+  id          String   @id @default(uuid())
+  phone       String
+  code        String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([phone, code])
+}

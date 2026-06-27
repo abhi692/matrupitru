@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { HeartHandshake, AlertCircle } from 'lucide-react';
+import { HeartHandshake, AlertCircle, MessageSquareText } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input, Label } from '../components/ui/Input';
@@ -14,13 +14,17 @@ const DEMO_ACCOUNTS = [
 ];
 
 export default function Login() {
+  const [mode, setMode] = useState('password'); // 'password' | 'otp'
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('password123');
+  const [otpSent, setOtpSent] = useState(false);
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { login, requestOtp, verifyOtp } = useAuth();
   const navigate = useNavigate();
 
-  async function onSubmit(e) {
+  async function onPasswordSubmit(e) {
     e.preventDefault();
     setError('');
     try {
@@ -29,6 +33,41 @@ export default function Login() {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  async function onRequestOtp(e) {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      await requestOtp(phone);
+      setOtpSent(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function onVerifyOtp(e) {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const user = await verifyOtp(phone, code);
+      navigate(`/${user.role}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function switchMode(next) {
+    setMode(next);
+    setError('');
+    setOtpSent(false);
+    setCode('');
   }
 
   return (
@@ -45,25 +84,72 @@ export default function Login() {
         </div>
 
         <div className="bg-white rounded-card shadow-soft-lg border border-stone-100 p-7">
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91..." />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-            {error && (
-              <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 rounded-control px-3 py-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {error}
+          <div className="flex rounded-control bg-stone-100 p-1 mb-5 text-sm font-medium">
+            <button
+              type="button"
+              onClick={() => switchMode('password')}
+              className={`flex-1 rounded-control py-1.5 transition-colors ${mode === 'password' ? 'bg-white text-brand-700 shadow-soft' : 'text-stone-500'}`}
+            >
+              Password
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('otp')}
+              className={`flex-1 rounded-control py-1.5 transition-colors ${mode === 'otp' ? 'bg-white text-brand-700 shadow-soft' : 'text-stone-500'}`}
+            >
+              OTP
+            </button>
+          </div>
+
+          {mode === 'password' && (
+            <form onSubmit={onPasswordSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91..." />
               </div>
-            )}
-            <Button type="submit" className="w-full" size="lg">
-              Log in
-            </Button>
-          </form>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              {error && <ErrorNote>{error}</ErrorNote>}
+              <Button type="submit" className="w-full" size="lg">
+                Log in
+              </Button>
+            </form>
+          )}
+
+          {mode === 'otp' && !otpSent && (
+            <form onSubmit={onRequestOtp} className="space-y-4">
+              <div>
+                <Label htmlFor="otpPhone">Phone</Label>
+                <Input id="otpPhone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91..." />
+              </div>
+              {error && <ErrorNote>{error}</ErrorNote>}
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? 'Sending...' : 'Send code'}
+              </Button>
+            </form>
+          )}
+
+          {mode === 'otp' && otpSent && (
+            <form onSubmit={onVerifyOtp} className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-brand-700 bg-brand-50 rounded-control px-3 py-2">
+                <MessageSquareText className="h-4 w-4 shrink-0" />
+                A 6-digit code was sent to {phone}.
+              </div>
+              <div>
+                <Label htmlFor="code">Code</Label>
+                <Input id="code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="123456" inputMode="numeric" />
+              </div>
+              {error && <ErrorNote>{error}</ErrorNote>}
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                {submitting ? 'Verifying...' : 'Verify & log in'}
+              </Button>
+              <button type="button" onClick={() => setOtpSent(false)} className="w-full text-center text-sm text-stone-500 hover:text-brand-600">
+                Use a different phone or resend
+              </button>
+            </form>
+          )}
         </div>
 
         <p className="text-sm text-stone-500 text-center mt-6">
@@ -90,6 +176,15 @@ export default function Login() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ErrorNote({ children }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 rounded-control px-3 py-2">
+      <AlertCircle className="h-4 w-4 shrink-0" />
+      {children}
     </div>
   );
 }

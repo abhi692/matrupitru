@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { PhoneInput, isValidIndianPhone } from '../../components/ui/PhoneInput';
 
 const SEVERITY_VARIANT = { emergency: 'danger', critical: 'danger', warning: 'warning', info: 'neutral' };
 
@@ -56,6 +57,10 @@ export default function Dashboard() {
   async function sendInvite(e) {
     e.preventDefault();
     setInviteStatus('');
+    if (!isValidIndianPhone(invitePhone)) {
+      setInviteStatus('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
     try {
       await api.post(`/families/${user.familyId}/invites`, { phone: invitePhone });
       setInviteStatus(`Invite sent to ${invitePhone}. They'll join automatically when they register or log in.`);
@@ -292,14 +297,7 @@ export default function Dashboard() {
           </ul>
         )}
         <form onSubmit={sendInvite} className="flex gap-2">
-          <input
-            type="tel"
-            required
-            value={invitePhone}
-            onChange={(e) => setInvitePhone(e.target.value)}
-            placeholder="Sibling's phone number (e.g. +919900000000)"
-            className="flex-1 rounded-control border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-          />
+          <PhoneInput value={invitePhone} onChange={setInvitePhone} className="flex-1" />
           <Button type="submit" variant="subtle" size="sm"><UserPlus className="h-3.5 w-3.5" /> Invite</Button>
         </form>
         {inviteStatus && <p className="text-sm text-stone-500 mt-2">{inviteStatus}</p>}

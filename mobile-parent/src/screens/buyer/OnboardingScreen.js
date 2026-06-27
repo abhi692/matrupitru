@@ -6,6 +6,7 @@ import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardTitle, CardDescription, Button, Input, Label, ErrorBox } from '../../components/ui';
 import Select from '../../components/Select';
+import PhoneInput, { isValidIndianPhone } from '../../components/PhoneInput';
 import { colors, radius } from '../../theme';
 
 const STEPS = ['Consent', 'Parent basics', 'Health profile', 'Emergency contact', 'Care plan'];
@@ -39,7 +40,7 @@ export default function OnboardingScreen({ navigation }) {
   const [familyId, setFamilyId] = useState(null);
   const [consent, setConsent] = useState(false);
   const [parent, setParent] = useState({
-    name: '', phone: '', address: '', city: '', geoLat: '', geoLng: '',
+    name: '', phone: '', password: '', confirmPassword: '', address: '', city: '', geoLat: '', geoLng: '',
     languages: 'en', mobilityLevel: 'independent', techComfort: 'low',
     conditions: '', allergies: '', medications: '', preferredHospital: '',
   });
@@ -81,10 +82,19 @@ export default function OnboardingScreen({ navigation }) {
 
   async function addParent() {
     setError('');
+    if (parent.password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (parent.password !== parent.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     try {
       await api.post(`/families/${familyId}/parents`, {
         name: parent.name,
         phone: parent.phone,
+        password: parent.password,
         address: parent.address,
         city: parent.city,
         geoLat: parent.geoLat ? Number(parent.geoLat) : undefined,
@@ -158,7 +168,15 @@ export default function OnboardingScreen({ navigation }) {
             <Label>Parent name</Label>
             <Input value={parent.name} onChangeText={(v) => setParent({ ...parent, name: v })} />
             <Label>Parent phone</Label>
-            <Input value={parent.phone} onChangeText={(v) => setParent({ ...parent, phone: v })} keyboardType="phone-pad" />
+            <PhoneInput value={parent.phone} onChange={(v) => setParent({ ...parent, phone: v })} />
+            <Label>Set a password for your parent's account</Label>
+            <Input value={parent.password} onChangeText={(v) => setParent({ ...parent, password: v })} placeholder="At least 8 characters" secureTextEntry />
+            <Label>Confirm password</Label>
+            <Input value={parent.confirmPassword} onChangeText={(v) => setParent({ ...parent, confirmPassword: v })} secureTextEntry />
+            <Text style={s.helper}>
+              Your parent can log in with this phone + password, or with a one-time code sent to
+              their phone — no need to remember the password if OTP is easier for them.
+            </Text>
             <Label>Address</Label>
             <Input value={parent.address} onChangeText={(v) => setParent({ ...parent, address: v })} />
             <Label>City</Label>
@@ -170,7 +188,7 @@ export default function OnboardingScreen({ navigation }) {
             <Text style={s.helper}>Used to geo-verify caregiver visits against the home address.</Text>
             <Button
               onPress={() => setStep(3)}
-              disabled={!parent.name || !parent.phone || !parent.address}
+              disabled={!parent.name || !isValidIndianPhone(parent.phone) || !parent.address || parent.password.length < 8 || parent.password !== parent.confirmPassword}
               style={{ marginTop: 8 }}
             >
               Continue
@@ -204,7 +222,7 @@ export default function OnboardingScreen({ navigation }) {
             <Label>Contact name</Label>
             <Input value={contact.name} onChangeText={(v) => setContact({ ...contact, name: v })} />
             <Label>Phone</Label>
-            <Input value={contact.phone} onChangeText={(v) => setContact({ ...contact, phone: v })} keyboardType="phone-pad" />
+            <PhoneInput value={contact.phone} onChange={(v) => setContact({ ...contact, phone: v })} />
             <Label>Relation</Label>
             <Input value={contact.relation} onChangeText={(v) => setContact({ ...contact, relation: v })} placeholder="son, neighbor..." />
             <Button onPress={addParent} style={{ marginTop: 8 }}>Save parent profile</Button>

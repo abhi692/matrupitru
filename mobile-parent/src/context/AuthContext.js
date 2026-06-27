@@ -55,13 +55,27 @@ export function AuthProvider({ children }) {
     return data.user;
   }
 
+  // OTP login is a two-step exchange: requestOtp just triggers the (mocked)
+  // SMS send, verifyOtp is the one that actually returns a session token.
+  async function requestOtp(phone) {
+    return api.post('/auth/otp/request', { phone });
+  }
+
+  async function verifyOtp(phone, code) {
+    const data = await api.post('/auth/otp/verify', { phone, code });
+    await setToken(data.token);
+    setUser(data.user);
+    registerPushToken();
+    return data.user;
+  }
+
   async function logout() {
     await setToken(null);
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, requestOtp, verifyOtp, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );

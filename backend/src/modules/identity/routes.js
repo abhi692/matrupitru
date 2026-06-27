@@ -2,10 +2,13 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../lib/db.js';
 import { signToken, requireAuth } from '../../lib/auth.js';
+import { notify } from '../../lib/notify.js';
 
 export const identityRouter = Router();
 
 const PHONE_RE = /^\+?[0-9]{8,15}$/;
+const OTP_TTL_MS = 5 * 60_000;
+const OTP_RESEND_COOLDOWN_MS = 30_000;
 
 // Public self-signup. Demo-grade auth (phone + password, no OTP/SSO — out of
 // scope for Phase 1) but the role is NOT trusted from the client: this is now
@@ -53,6 +56,52 @@ identityRouter.post('/auth/login', async (req, res) => {
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
+  const caregiverProfile = await prisma.caregiver.findUnique({ where: { userId: user.id } });
+  res.json({ token: signToken(user), user: { ...safeUser(user), caregiverId: caregiverProfile?.id || null } });
+});
+
+// POST /v1/auth/otp/request — sends a 6-digit code to an EXISTING account's
+// phone (login only, not registration — a password-free alternative for
+// users, especially parents, who don't want to remember a password).
+// Delivery goes through the same mocked SMS channel as everything else; see
+// lib/notify.js for the real-gateway swap path.
+identityRouter.post('/auth/otp/request', async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'phone required' });
+
+  const user = await prisma.user.findUnique({ where: { phone } });
+  if (!user) return res.status(404).json({ error: 'No account found for this phone number' });
+
+  const recent = await prisma.otpCode.findFirst({
+    where: { phone, createdAt: { gt: new Date(Date.now() - OTP_RESEND_COOLDOWN_MS) } },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (recent) return res.status(429).json({ error: 'Please wait before requesting another code' });
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  await prisma.otpCode.create({ data: { phone, code, expiresAt: new Date(Date.now() + OTP_TTL_MS) } });
+  await notify('sms', phone, `Your MatruPitru login code is ${code}. It expires in 5 minutes.`);
+
+  res.json({ status: 'sent', expiresInSeconds: OTP_TTL_MS / 1000 });
+});
+
+// POST /v1/auth/otp/verify — exchanges a valid, unused, unexpired code for a
+// session token, same shape as /auth/login.
+identityRouter.post('/auth/otp/verify', async (req, res) => {
+  const { phone, code } = req.body;
+  if (!phone || !code) return res.status(400).json({ error: 'phone and code required' });
+
+  const otp = await prisma.otpCode.findFirst({
+    where: { phone, code, consumedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!otp) return res.status(401).json({ error: 'Invalid or expired code' });
+
+  const user = await prisma.user.findUnique({ where: { phone } });
+  if (!user) return res.status(404).json({ error: 'No account found for this phone number' });
+
+  await prisma.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
+
   const caregiverProfile = await prisma.caregiver.findUnique({ where: { userId: user.id } });
   res.json({ token: signToken(user), user: { ...safeUser(user), caregiverId: caregiverProfile?.id || null } });
 });

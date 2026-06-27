@@ -17,6 +17,29 @@ test('buyer can create a family and add a parent', async () => {
   assert.equal(parent.familyId, family.id);
 });
 
+test('adding a parent requires an explicit password (no more silent default)', async () => {
+  const { token } = await registerUser();
+  const family = await request(app).post('/v1/families').set('Authorization', `Bearer ${token}`).send({ consent: true });
+
+  const res = await request(app)
+    .post(`/v1/families/${family.body.id}/parents`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'No Password Parent', phone: uniquePhone('877'), address: '1 Test St' });
+  assert.equal(res.status, 400);
+});
+
+test('adding a parent with a phone already in use is rejected', async () => {
+  const { token } = await registerUser();
+  const family = await request(app).post('/v1/families').set('Authorization', `Bearer ${token}`).send({ consent: true });
+  const { user: existingUser } = await registerUser();
+
+  const res = await request(app)
+    .post(`/v1/families/${family.body.id}/parents`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Dup Phone Parent', phone: existingUser.phone, password: 'password123', address: '1 Test St' });
+  assert.equal(res.status, 409);
+});
+
 test('dashboard reflects the parent and is scoped to the right family', async () => {
   const { token } = await registerUser();
   const { family } = await createFamilyWithParent(token);

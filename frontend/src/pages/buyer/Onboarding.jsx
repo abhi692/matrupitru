@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { Card, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input, Label } from '../../components/ui/Input';
+import { PhoneInput, isValidIndianPhone } from '../../components/ui/PhoneInput';
 import { Select } from '../../components/ui/Select';
 import { cn } from '../../lib/utils';
 
@@ -24,7 +25,7 @@ export default function Onboarding() {
   const [familyId, setFamilyId] = useState(null);
   const [consent, setConsent] = useState(false);
   const [parent, setParent] = useState({
-    name: '', phone: '', address: '', city: '', geoLat: '', geoLng: '',
+    name: '', phone: '', password: '', confirmPassword: '', address: '', city: '', geoLat: '', geoLng: '',
     languages: 'en', mobilityLevel: 'independent', techComfort: 'low',
     conditions: '', allergies: '', medications: '', preferredHospital: '',
   });
@@ -49,10 +50,17 @@ export default function Onboarding() {
 
   async function addParent() {
     setError('');
+    if (parent.password.length < 8) {
+      return setError('Password must be at least 8 characters.');
+    }
+    if (parent.password !== parent.confirmPassword) {
+      return setError('Passwords do not match.');
+    }
     try {
       await api.post(`/families/${familyId}/parents`, {
         name: parent.name,
         phone: parent.phone,
+        password: parent.password,
         address: parent.address,
         city: parent.city,
         geoLat: parent.geoLat ? Number(parent.geoLat) : undefined,
@@ -158,8 +166,20 @@ export default function Onboarding() {
             </div>
             <div>
               <Label>Parent phone</Label>
-              <Input value={parent.phone} onChange={(e) => setParent({ ...parent, phone: e.target.value })} />
+              <PhoneInput value={parent.phone} onChange={(v) => setParent({ ...parent, phone: v })} />
             </div>
+            <div>
+              <Label>Set a password for your parent's account</Label>
+              <Input type="password" value={parent.password} onChange={(e) => setParent({ ...parent, password: e.target.value })} placeholder="At least 8 characters" />
+            </div>
+            <div>
+              <Label>Confirm password</Label>
+              <Input type="password" value={parent.confirmPassword} onChange={(e) => setParent({ ...parent, confirmPassword: e.target.value })} />
+            </div>
+            <p className="text-xs text-stone-400 -mt-2">
+              Your parent can log in with this phone + password, or with a one-time code sent to
+              their phone — they don't have to remember the password if OTP is easier for them.
+            </p>
             <div>
               <Label>Address</Label>
               <Input value={parent.address} onChange={(e) => setParent({ ...parent, address: e.target.value })} />
@@ -179,7 +199,12 @@ export default function Onboarding() {
               </div>
             </div>
             <p className="text-xs text-stone-400 -mt-2">Lat/lng is used to geo-verify caregiver visits against the home address.</p>
-            <Button onClick={() => setStep(3)} size="lg" className="w-full mt-2" disabled={!parent.name || !parent.phone || !parent.address}>
+            <Button
+              onClick={() => setStep(3)}
+              size="lg"
+              className="w-full mt-2"
+              disabled={!parent.name || !isValidIndianPhone(parent.phone) || !parent.address || parent.password.length < 8 || parent.password !== parent.confirmPassword}
+            >
               Continue
             </Button>
           </div>
@@ -243,7 +268,7 @@ export default function Onboarding() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Phone</Label>
-                <Input value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                <PhoneInput value={contact.phone} onChange={(v) => setContact({ ...contact, phone: v })} />
               </div>
               <div>
                 <Label>Relation</Label>
